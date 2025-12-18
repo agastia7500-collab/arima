@@ -86,6 +86,13 @@ st.markdown("""
         min-height: 280px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
+
+    .analysis-box {
+        color: #333333 !important;
+    }
+    .analysis-box * {
+        color: #333333 !important;
+    }
     
     .analysis-box h1, .analysis-box h2, .analysis-box h3, .analysis-box h4,
     .analysis-box p, .analysis-box li, .analysis-box span, .analysis-box td, .analysis-box th {
