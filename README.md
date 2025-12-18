@@ -1,1 +1,1 @@
-# pj-arima
+# arima
