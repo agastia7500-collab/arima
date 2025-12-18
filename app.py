@@ -23,146 +23,130 @@ st.set_page_config(
 # ============================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
-    
-    .stApp {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    }
-    
-    .stMarkdown, .stMarkdown p, .stMarkdown li, .stMarkdown span, p, li, span, div,
-    h1, h2, h3, h4, h5, h6 {
-        color: #ffffff !important;
-    }
-    
-    .main-title {
-        font-size: 3rem;
-        font-weight: 900;
-        background: linear-gradient(135deg, #ffd700, #ff8c00);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center;
-        padding: 1rem 0;
-    }
-    
-    .sub-title {
-        font-size: 1.1rem;
-        color: #e0e0e0 !important;
-        text-align: center;
-        margin-bottom: 2rem;
-        letter-spacing: 0.2em;
-    }
-    
-    .feature-card {
-        background: rgba(255,255,255,0.1);
-        border-radius: 15px;
-        padding: 1.5rem;
-        border: 1px solid rgba(255, 215, 0, 0.3);
-        margin: 1rem 0;
-    }
-    
-    .feature-card h3 { color: #ffd700 !important; }
-    .feature-card p, .feature-card li { color: #e0e0e0 !important; }
-    
-    /* 結果ボックス - 白背景で視認性確保 */
-    .result-box {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        border-left: 5px solid #ffd700;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-    
-    .result-box h4, .result-box p, .result-box li, .result-box span,
-    .result-box h1, .result-box h2, .result-box h3 {
-        color: #333333 !important;
-    }
-    
-    /* 分析ボックス */
-    .analysis-box {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 1rem;
-        min-height: 280px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
 
-    .analysis-box {
-        color: #333333 !important;
-    }
-    .analysis-box * {
-        color: #333333 !important;
-    }
-    
-    .analysis-box h1, .analysis-box h2, .analysis-box h3, .analysis-box h4,
-    .analysis-box p, .analysis-box li, .analysis-box span, .analysis-box td, .analysis-box th {
-        color: #333333 !important;
-    }
-    
-    .box-horse { border: 3px solid #e74c3c; }
-    .box-jockey { border: 3px solid #3498db; }
-    .box-course { border: 3px solid #27ae60; }
-    .box-total { border: 3px solid #f39c12; background: #fffef5; }
-    .box-events { border: 3px solid #9b59b6; }
-    .box-numbers { border: 3px solid #e67e22; }
-    .box-buy { border: 3px solid #c0392b; background: #fff8f8; }
-    
-    /* タイトルラベル */
-    .label {
-        font-size: 1.1rem;
-        font-weight: 700;
-        padding: 0.4rem 1rem;
-        border-radius: 6px;
-        margin-bottom: 0.8rem;
-        text-align: center;
-        color: #ffffff !important;
-        display: inline-block;
-        width: 100%;
-    }
-    
-    .label-horse { background: #e74c3c; }
-    .label-jockey { background: #3498db; }
-    .label-course { background: #27ae60; }
-    .label-total { background: #f39c12; }
-    .label-events { background: #9b59b6; }
-    .label-numbers { background: #e67e22; }
-    .label-buy { background: #c0392b; }
-    
-    /* ボタン */
-    .stButton > button {
-        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
-        color: #1a1a2e !important;
-        font-weight: 700;
-        font-size: 1.1rem;
-        padding: 0.7rem 2rem;
-        border-radius: 50px;
-        border: none;
-    }
-    
-    .stButton > button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
-    }
-    
-    /* タブ */
-    .stTabs [data-baseweb="tab"] {
-        background: rgba(255,255,255,0.15);
-        color: #ffffff !important;
-        font-weight: 600;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
-        color: #1a1a2e !important;
-    }
-    
-    /* サイドバー */
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1a1a2e, #0f3460);
-    }
-    
-    section[data-testid="stSidebar"] .stMarkdown { color: #ffffff !important; }
-   
+/* ===== 全体 ===== */
+.stApp {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    font-family: 'Noto Sans JP', sans-serif;
+}
+
+/* 表示系テキストは白 */
+.stMarkdown p, .stMarkdown li,
+h1, h2, h3, h4, h5, h6 {
+    color: #ffffff;
+}
+
+/* ===== タイトル ===== */
+.main-title {
+    font-size: 3rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+}
+
+.sub-title {
+    font-size: 1.1rem;
+    color: #e0e0e0;
+    text-align: center;
+    letter-spacing: 0.2em;
+}
+
+/* ===== カード ===== */
+.feature-card {
+    background: rgba(255,255,255,0.1);
+    border-radius: 15px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255,215,0,0.3);
+}
+.feature-card h3 { color: #ffd700; }
+.feature-card p { color: #e0e0e0; }
+
+/* ===== 結果ボックス ===== */
+.result-box {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border-left: 5px solid #ffd700;
+}
+.result-box * {
+    color: #333333 !important;
+}
+
+/* ===== 分析ボックス（★ここ重要） ===== */
+.analysis-box {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1rem;
+    min-height: 280px;
+    color: #333333 !important;
+}
+.analysis-box * {
+    color: #333333 !important;
+}
+
+/* 枠色 */
+.box-horse { border: 3px solid #e74c3c; }
+.box-jockey { border: 3px solid #3498db; }
+.box-course { border: 3px solid #27ae60; }
+.box-total { border: 3px solid #f39c12; background: #fffef5; }
+.box-events { border: 3px solid #9b59b6; }
+.box-numbers { border: 3px solid #e67e22; }
+.box-buy { border: 3px solid #c0392b; background: #fff8f8; }
+
+/* ===== ラベル ===== */
+.label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    text-align: center;
+    color: #ffffff;
+    width: 100%;
+}
+.label-horse { background: #e74c3c; }
+.label-jockey { background: #3498db; }
+.label-course { background: #27ae60; }
+.label-total { background: #f39c12; }
+.label-events { background: #9b59b6; }
+.label-numbers { background: #e67e22; }
+.label-buy { background: #c0392b; }
+
+/* ===== ボタン ===== */
+.stButton > button {
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    color: #1a1a2e !important;
+    font-weight: 700;
+    border-radius: 50px;
+}
+
+/* ===== Tabs ===== */
+.stTabs [data-baseweb="tab"] {
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
+}
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    color: #1a1a2e !important;
+}
+
+/* ===== Selectbox（★ここ重要） ===== */
+div[data-baseweb="select"] * {
+    color: #000000 !important;
+}
+div[data-baseweb="select"] {
+    background: #ffffff;
+}
+
+/* ===== Sidebar ===== */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1a1a2e, #0f3460);
+}
+section[data-testid="stSidebar"] .stMarkdown {
+    color: #ffffff;
+}
 </style>
 """, unsafe_allow_html=True)
 
