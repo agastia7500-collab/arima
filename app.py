@@ -162,24 +162,7 @@ st.markdown("""
     }
     
     section[data-testid="stSidebar"] .stMarkdown { color: #ffffff !important; }
-
-    /* selectbox（選択済みテキスト） */
-div[data-baseweb="select"] > div {
-    color: #000000 !important;
-}
-
-/* selectbox の中のテキスト */
-div[data-baseweb="select"] span {
-    color: #000000 !important;
-}
-
-/* プレースホルダー/選択値 */
-div[data-baseweb="select"] input {
-    color: #000000 !important;
-}
-
-
-    
+   
 </style>
 """, unsafe_allow_html=True)
 
