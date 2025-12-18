@@ -23,130 +23,157 @@ st.set_page_config(
 # ============================================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
 
-/* ===== 全体 ===== */
-.stApp {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    font-family: 'Noto Sans JP', sans-serif;
-}
+    .stApp {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        font-family: 'Noto Sans JP', sans-serif;
+    }
 
-/* 表示系テキストは白 */
-.stMarkdown p, .stMarkdown li,
-h1, h2, h3, h4, h5, h6 {
-    color: #ffffff;
-}
+    /* ===== 基本テキスト色（全体は白） ===== */
+    .stMarkdown, .stMarkdown p, .stMarkdown li, .stMarkdown span,
+    h1, h2, h3, h4, h5, h6 {
+        color: #ffffff !important;
+    }
 
-/* ===== タイトル ===== */
-.main-title {
-    font-size: 3rem;
-    font-weight: 900;
-    background: linear-gradient(135deg, #ffd700, #ff8c00);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-align: center;
-}
+    /* ===== 見出し（"アドマイヤテラの分析"等）が灰色になる問題の抑止 ===== */
+    div[data-testid="stMarkdownContainer"] h1,
+    div[data-testid="stMarkdownContainer"] h2,
+    div[data-testid="stMarkdownContainer"] h3,
+    div[data-testid="stMarkdownContainer"] h4,
+    div[data-testid="stMarkdownContainer"] h5,
+    div[data-testid="stMarkdownContainer"] h6,
+    div[data-testid="stMarkdownContainer"] a {
+        color: #ffffff !important;
+    }
 
-.sub-title {
-    font-size: 1.1rem;
-    color: #e0e0e0;
-    text-align: center;
-    letter-spacing: 0.2em;
-}
+    .main-title {
+        font-size: 3rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #ffd700, #ff8c00);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        padding: 1rem 0;
+    }
 
-/* ===== カード ===== */
-.feature-card {
-    background: rgba(255,255,255,0.1);
-    border-radius: 15px;
-    padding: 1.5rem;
-    border: 1px solid rgba(255,215,0,0.3);
-}
-.feature-card h3 { color: #ffd700; }
-.feature-card p { color: #e0e0e0; }
+    .sub-title {
+        font-size: 1.1rem;
+        color: #e0e0e0 !important;
+        text-align: center;
+        margin-bottom: 2rem;
+        letter-spacing: 0.2em;
+    }
 
-/* ===== 結果ボックス ===== */
-.result-box {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1.5rem;
-    border-left: 5px solid #ffd700;
-}
-.result-box * {
-    color: #333333 !important;
-}
+    .feature-card {
+        background: rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        margin: 1rem 0;
+    }
 
-/* ===== 分析ボックス（★ここ重要） ===== */
-.analysis-box {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1rem;
-    min-height: 280px;
-    color: #333333 !important;
-}
-.analysis-box * {
-    color: #333333 !important;
-}
+    .feature-card h3 { color: #ffd700 !important; }
+    .feature-card p, .feature-card li { color: #e0e0e0 !important; }
 
-/* 枠色 */
-.box-horse { border: 3px solid #e74c3c; }
-.box-jockey { border: 3px solid #3498db; }
-.box-course { border: 3px solid #27ae60; }
-.box-total { border: 3px solid #f39c12; background: #fffef5; }
-.box-events { border: 3px solid #9b59b6; }
-.box-numbers { border: 3px solid #e67e22; }
-.box-buy { border: 3px solid #c0392b; background: #fff8f8; }
+    /* ===== 結果ボックス（白背景→黒文字） ===== */
+    .result-box {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 0.5rem 0;
+        border-left: 5px solid #ffd700;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .result-box * {
+        color: #333333 !important;
+    }
 
-/* ===== ラベル ===== */
-.label {
-    font-size: 1.1rem;
-    font-weight: 700;
-    padding: 0.4rem 1rem;
-    border-radius: 6px;
-    text-align: center;
-    color: #ffffff;
-    width: 100%;
-}
-.label-horse { background: #e74c3c; }
-.label-jockey { background: #3498db; }
-.label-course { background: #27ae60; }
-.label-total { background: #f39c12; }
-.label-events { background: #9b59b6; }
-.label-numbers { background: #e67e22; }
-.label-buy { background: #c0392b; }
+    /* ===== 分析ボックス（白背景→黒文字：総合評価が白になる問題を確実に潰す） ===== */
+    .analysis-box {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 1rem;
+        min-height: 280px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        color: #333333 !important;
+    }
+    .analysis-box * {
+        color: #333333 !important;
+    }
 
-/* ===== ボタン ===== */
-.stButton > button {
-    background: linear-gradient(135deg, #ffd700, #ff8c00);
-    color: #1a1a2e !important;
-    font-weight: 700;
-    border-radius: 50px;
-}
+    .box-horse { border: 3px solid #e74c3c; }
+    .box-jockey { border: 3px solid #3498db; }
+    .box-course { border: 3px solid #27ae60; }
+    .box-total { border: 3px solid #f39c12; background: #fffef5; }
+    .box-events { border: 3px solid #9b59b6; }
+    .box-numbers { border: 3px solid #e67e22; }
+    .box-buy { border: 3px solid #c0392b; background: #fff8f8; }
 
-/* ===== Tabs ===== */
-.stTabs [data-baseweb="tab"] {
-    background: rgba(255,255,255,0.15);
-    color: #ffffff;
-}
-.stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #ffd700, #ff8c00);
-    color: #1a1a2e !important;
-}
+    /* ===== タイトルラベル ===== */
+    .label {
+        font-size: 1.1rem;
+        font-weight: 700;
+        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.8rem;
+        text-align: center;
+        color: #ffffff !important;
+        display: inline-block;
+        width: 100%;
+    }
 
-/* ===== Selectbox（★ここ重要） ===== */
-div[data-baseweb="select"] * {
-    color: #000000 !important;
-}
-div[data-baseweb="select"] {
-    background: #ffffff;
-}
+    .label-horse { background: #e74c3c; }
+    .label-jockey { background: #3498db; }
+    .label-course { background: #27ae60; }
+    .label-total { background: #f39c12; }
+    .label-events { background: #9b59b6; }
+    .label-numbers { background: #e67e22; }
+    .label-buy { background: #c0392b; }
 
-/* ===== Sidebar ===== */
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #1a1a2e, #0f3460);
-}
-section[data-testid="stSidebar"] .stMarkdown {
-    color: #ffffff;
-}
+    /* ===== ボタン ===== */
+    .stButton > button {
+        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
+        color: #1a1a2e !important;
+        font-weight: 700;
+        font-size: 1.1rem;
+        padding: 0.7rem 2rem;
+        border-radius: 50px;
+        border: none;
+    }
+
+    .stButton > button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+    }
+
+    /* ===== タブ ===== */
+    .stTabs [data-baseweb="tab"] {
+        background: rgba(255,255,255,0.15);
+        color: #ffffff !important;
+        font-weight: 600;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
+        color: #1a1a2e !important;
+    }
+
+    /* ===== サイドバー ===== */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1a1a2e, #0f3460);
+    }
+    section[data-testid="stSidebar"] .stMarkdown { color: #ffffff !important; }
+
+    /* ===== Selectbox の選択値が白になる問題：黒に固定 ===== */
+    div[data-baseweb="select"] * {
+        color: #000000 !important;
+    }
+
+    /* ===== st.info / st.warning / st.success 等（待機中/分析中）テキストを白に ===== */
+    div[data-testid="stAlert"] * {
+        color: #ffffff !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -174,7 +201,7 @@ def load_race_data(uploaded_file=None):
         for sheet in xlsx.sheet_names:
             data[sheet] = pd.read_excel(xlsx, sheet_name=sheet)
         return data
-    except:
+    except Exception:
         return None
 
 def format_data_for_prompt(data):
@@ -182,7 +209,7 @@ def format_data_for_prompt(data):
         return "データなし"
     formatted = ""
     sheets = ["年齢", "枠順", "騎手", "血統", "前走クラス", "前走レース別", "馬体重増減"]
-    titles = ["年齢別期待値", "枠順別期待値", "騎手別期待値（中山2500m）", "血統（種牡馬）別期待値", 
+    titles = ["年齢別期待値", "枠順別期待値", "騎手別期待値（中山2500m）", "血統（種牡馬）別期待値",
               "前走クラス別期待値", "前走レース別期待値", "馬体重増減別期待値"]
     for sheet, title in zip(sheets, titles):
         if sheet in data:
@@ -244,9 +271,13 @@ def analyze_data_summary(client, data):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"データ分析:\n{format_data_for_prompt(data)}"}],
-            temperature=0.5, max_tokens=1000)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"データ分析:\n{format_data_for_prompt(data)}"}
+            ],
+            temperature=0.5,
+            max_tokens=1000,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -263,9 +294,13 @@ def predict_horses(client, data, analysis):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"【分析結果】\n{analysis}"}],
-            temperature=0.7, max_tokens=1500)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"【分析結果】\n{analysis}"}
+            ],
+            temperature=0.7,
+            max_tokens=1500,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -280,24 +315,32 @@ def suggest_betting(client, prediction):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"予想:\n{prediction}"}],
-            temperature=0.6, max_tokens=1000)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"予想:\n{prediction}"}
+            ],
+            temperature=0.6,
+            max_tokens=1000,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
 
 # ============================================
-# 機能②: 単体評価（4段階）
+# 機能②: 単体評価
 # ============================================
 def analyze_horse(client, horse_info, data):
     system_prompt = """馬の能力を分析。【出力】■ 評価: ★5段階 ■ 血統評価(2-3文) ■ 年齢評価(2-3文) ■ 能力・実績(2-3文)"""
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"馬名:{horse_info['馬名']} 性齢:{horse_info['性齢']} 血統:{horse_info['血統']} 前走:{horse_info['前走']}\n{format_data_for_prompt(data)}"}],
-            temperature=0.6, max_tokens=800)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"馬名:{horse_info['馬名']} 性齢:{horse_info['性齢']} 血統:{horse_info['血統']} 前走:{horse_info['前走']}\n{format_data_for_prompt(data)}"}
+            ],
+            temperature=0.6,
+            max_tokens=800,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -307,9 +350,13 @@ def analyze_jockey(client, horse_info, data):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"騎手:{horse_info['騎手']} 騎乗馬:{horse_info['馬名']}\n{format_data_for_prompt(data)}"}],
-            temperature=0.6, max_tokens=800)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"騎手:{horse_info['騎手']} 騎乗馬:{horse_info['馬名']}\n{format_data_for_prompt(data)}"}
+            ],
+            temperature=0.6,
+            max_tokens=800,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -319,9 +366,13 @@ def analyze_course(client, horse_info, data):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"馬名:{horse_info['馬名']} 前走:{horse_info['前走']}\n{format_data_for_prompt(data)}"}],
-            temperature=0.6, max_tokens=800)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"馬名:{horse_info['馬名']} 前走:{horse_info['前走']}\n{format_data_for_prompt(data)}"}
+            ],
+            temperature=0.6,
+            max_tokens=800,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -331,9 +382,13 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"【{horse_info['馬名']}】\n馬分析:{h_res}\n騎手分析:{j_res}\nコース分析:{c_res}"}],
-            temperature=0.6, max_tokens=800)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"【{horse_info['馬名']}】\n馬分析:{h_res}\n騎手分析:{j_res}\nコース分析:{c_res}"}
+            ],
+            temperature=0.6,
+            max_tokens=800,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -358,9 +413,13 @@ def get_events_2025(client):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": "2025年1月から12月までの日本での主要な出来事を教えてください。2024年以前は不要です。"}],
-            temperature=0.8, max_tokens=1200)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": "2025年1月から12月までの日本での主要な出来事を教えてください。2024年以前は不要です。"}
+            ],
+            temperature=0.8,
+            max_tokens=1200,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -370,9 +429,13 @@ def extract_numbers(client, events):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"出来事:\n{events}"}],
-            temperature=0.7, max_tokens=1000)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"出来事:\n{events}"}
+            ],
+            temperature=0.7,
+            max_tokens=1000,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -385,9 +448,13 @@ def sign_betting(client, events, numbers):
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"出来事:\n{events}\n数字:\n{numbers}"}],
-            temperature=0.9, max_tokens=1000)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"出来事:\n{events}\n数字:\n{numbers}"}
+            ],
+            temperature=0.9,
+            max_tokens=1000,
+        )
         return response.choices[0].message.content
     except Exception as e:
         return f"エラー: {str(e)}"
@@ -398,14 +465,14 @@ def sign_betting(client, events, numbers):
 def main():
     st.markdown('<h1 class="main-title">🏇 有馬記念予想 2025</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-title">第70回 AI × データ分析 × サイン理論</p>', unsafe_allow_html=True)
-    
+
     client = get_openai_client()
-    
+
     # サイドバー
     with st.sidebar:
         st.markdown("### ⚙️ 設定")
         uploaded_file = st.file_uploader("📁 予想データ", type=["xlsx", "xls"])
-        
+
         if uploaded_file:
             data = load_race_data(uploaded_file)
             st.success("✅ データ読み込み完了")
@@ -416,26 +483,26 @@ def main():
             else:
                 st.warning("⚠️ データなし（分析精度低下）")
                 data = {}
-        
+
         st.markdown("---")
         st.markdown("### 🐴 2025年 出走予定馬")
         for num, info in HORSE_LIST_2025.items():
             st.markdown(f"**{info['馬名']}** ({info['騎手']})")
-    
+
     # タブ
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
-    
+
     # タブ1: 総合予想
     with tab1:
         st.markdown("""<div class="feature-card">
             <h3>🎯 総合予想機能</h3>
             <p>STEP1: データ傾向分析 → STEP2: 馬の選定 → STEP3: 買い目提案</p>
         </div>""", unsafe_allow_html=True)
-        
+
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             start_btn = st.button("🚀 予想スタート", key="comp", use_container_width=True)
-        
+
         if start_btn:
             if client is None:
                 st.error("APIキーを設定してください")
@@ -444,40 +511,42 @@ def main():
                 with st.spinner("📊 分析中..."):
                     step1 = analyze_data_summary(client, data)
                 st.markdown(f'<div class="result-box"><h4>📊 データ傾向</h4>{step1}</div>', unsafe_allow_html=True)
-                
+
                 st.markdown("### STEP2: 馬の選定")
                 with st.spinner("🐴 評価中..."):
                     step2 = predict_horses(client, data, step1)
                 st.markdown(f'<div class="result-box"><h4>🏇 推奨馬</h4>{step2}</div>', unsafe_allow_html=True)
-                
+
                 st.markdown("### STEP3: 買い目提案")
                 with st.spinner("💰 検討中..."):
                     step3 = suggest_betting(client, step2)
                 st.markdown(f'<div class="result-box"><h4>💰 買い目</h4>{step3}</div>', unsafe_allow_html=True)
-    
+
     # タブ2: 単体評価
     with tab2:
         st.markdown("""<div class="feature-card">
             <h3>🔍 単体評価機能</h3>
             <p>馬・騎手・コースの3軸で分析 → 統合評価</p>
         </div>""", unsafe_allow_html=True)
-        
+
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            horse_num = st.selectbox("🎰 馬を選択", list(HORSE_LIST_2025.keys()),
-                                     format_func=lambda x: f"{HORSE_LIST_2025[x]['馬名']} ({HORSE_LIST_2025[x]['騎手']})")
+            horse_num = st.selectbox(
+                "🎰 馬を選択",
+                list(HORSE_LIST_2025.keys()),
+                format_func=lambda x: f"{HORSE_LIST_2025[x]['馬名']} ({HORSE_LIST_2025[x]['騎手']})"
+            )
             eval_btn = st.button("🔍 評価スタート", key="eval", use_container_width=True)
-        
+
         if eval_btn:
             if client is None:
                 st.error("APIキーを設定してください")
             else:
                 horse_info = HORSE_LIST_2025[horse_num]
                 st.markdown(f"## {horse_info['馬名']} の分析")
-                
-                # 3列レイアウト
+
                 col_h, col_j, col_c = st.columns(3)
-                
+
                 with col_h:
                     st.markdown('<div class="label label-horse">🐴 馬分析</div>', unsafe_allow_html=True)
                     ph_h = st.empty()
@@ -490,49 +559,44 @@ def main():
                     st.markdown('<div class="label label-course">🏟️ コース分析</div>', unsafe_allow_html=True)
                     ph_c = st.empty()
                     ph_c.info("待機中...")
-                
+
                 st.markdown("---")
                 st.markdown('<div class="label label-total">📊 総合評価</div>', unsafe_allow_html=True)
                 ph_t = st.empty()
                 ph_t.info("待機中...")
-                
-                # 馬分析
+
                 h_res = analyze_horse(client, horse_info, data)
                 ph_h.markdown(f'<div class="analysis-box box-horse">{h_res}</div>', unsafe_allow_html=True)
-                
-                # 騎手分析
+
                 ph_j.info("分析中...")
                 j_res = analyze_jockey(client, horse_info, data)
                 ph_j.markdown(f'<div class="analysis-box box-jockey">{j_res}</div>', unsafe_allow_html=True)
-                
-                # コース分析
+
                 ph_c.info("分析中...")
                 c_res = analyze_course(client, horse_info, data)
                 ph_c.markdown(f'<div class="analysis-box box-course">{c_res}</div>', unsafe_allow_html=True)
-                
-                # 総合評価
+
                 ph_t.info("統合中...")
                 t_res = analyze_total(client, horse_info, h_res, j_res, c_res)
                 ph_t.markdown(f'<div class="analysis-box box-total">{t_res}</div>', unsafe_allow_html=True)
-    
+
     # タブ3: サイン理論
     with tab3:
         st.markdown("""<div class="feature-card">
             <h3>🔮 サイン理論機能</h3>
             <p>2025年の出来事から数字を読み解く ※エンターテイメント</p>
         </div>""", unsafe_allow_html=True)
-        
+
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             sign_btn = st.button("🔮 サイン分析", key="sign", use_container_width=True)
-        
+
         if sign_btn:
             if client is None:
                 st.error("APIキーを設定してください")
             else:
-                # 2列レイアウト
                 col_e, col_n = st.columns(2)
-                
+
                 with col_e:
                     st.markdown('<div class="label label-events">📅 2025年の出来事</div>', unsafe_allow_html=True)
                     ph_e = st.empty()
@@ -541,26 +605,23 @@ def main():
                     st.markdown('<div class="label label-numbers">🔢 抽出数字</div>', unsafe_allow_html=True)
                     ph_n = st.empty()
                     ph_n.info("待機中...")
-                
+
                 st.markdown("---")
                 st.markdown('<div class="label label-buy">💰 サイン理論買い目</div>', unsafe_allow_html=True)
                 ph_b = st.empty()
                 ph_b.info("待機中...")
-                
-                # 出来事（2025年のみ）
+
                 e_res = get_events_2025(client)
                 ph_e.markdown(f'<div class="analysis-box box-events">{e_res}</div>', unsafe_allow_html=True)
-                
-                # 数字抽出
+
                 ph_n.info("抽出中...")
                 n_res = extract_numbers(client, e_res)
                 ph_n.markdown(f'<div class="analysis-box box-numbers">{n_res}</div>', unsafe_allow_html=True)
-                
-                # 買い目
+
                 ph_b.info("導出中...")
                 b_res = sign_betting(client, e_res, n_res)
                 ph_b.markdown(f'<div class="analysis-box box-buy">{b_res}</div>', unsafe_allow_html=True)
-    
+
     # フッター
     st.markdown("---")
     st.markdown("""<div style="text-align:center;color:#999;padding:1rem;">
