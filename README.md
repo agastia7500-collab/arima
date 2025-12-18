@@ -1,6 +1,8 @@
-# 🏇 有馬記念予想アプリ
+# 🏇 有馬記念予想アプリ 2025
 
-AI（GPT-4o）を活用した競馬予想アプリケーションです。GitHub × Streamlit Cloud で簡単にデプロイできます。
+第70回有馬記念（2025年12月28日）の予想アプリです。AI（GPT-4o）を活用して、データ分析・単体評価・サイン理論の3つの機能で予想をサポートします。
+
+GitHub × Streamlit Cloud で簡単にデプロイできます。
 
 ![Preview](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
