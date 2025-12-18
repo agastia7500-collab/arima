@@ -7,7 +7,6 @@ import streamlit as st
 import pandas as pd
 from openai import OpenAI
 import os
-from datetime import datetime
 
 # ============================================
 # ページ設定
@@ -24,610 +23,532 @@ st.set_page_config(
 # ============================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
     
-    /* 全体のスタイル */
     .stApp {
         background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-        font-family: 'Noto Sans JP', sans-serif;
     }
     
-    /* タイトルスタイル */
+    .stMarkdown, .stMarkdown p, .stMarkdown li, .stMarkdown span, p, li, span, div,
+    h1, h2, h3, h4, h5, h6 {
+        color: #ffffff !important;
+    }
+    
     .main-title {
-        font-family: 'Noto Sans JP', sans-serif;
-        font-size: 3.5rem;
+        font-size: 3rem;
         font-weight: 900;
-        background: linear-gradient(135deg, #ffd700, #ff8c00, #ff6347);
+        background: linear-gradient(135deg, #ffd700, #ff8c00);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        background-clip: text;
         text-align: center;
         padding: 1rem 0;
-        text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-        animation: glow 2s ease-in-out infinite alternate;
     }
     
-    @keyframes glow {
-        from { filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-        to { filter: drop-shadow(0 0 20px rgba(255, 140, 0, 0.8)); }
-    }
-    
-    /* サブタイトル */
     .sub-title {
-        font-family: 'Zen Kaku Gothic New', sans-serif;
-        font-size: 1.2rem;
-        color: #e0e0e0;
+        font-size: 1.1rem;
+        color: #e0e0e0 !important;
         text-align: center;
         margin-bottom: 2rem;
-        letter-spacing: 0.3em;
+        letter-spacing: 0.2em;
     }
     
-    /* 機能カード */
     .feature-card {
-        background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-        border-radius: 20px;
-        padding: 2rem;
+        background: rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 1.5rem;
         border: 1px solid rgba(255, 215, 0, 0.3);
-        backdrop-filter: blur(10px);
-        transition: all 0.3s ease;
         margin: 1rem 0;
     }
     
-    .feature-card:hover {
-        transform: translateY(-5px);
-        border-color: rgba(255, 215, 0, 0.6);
-        box-shadow: 0 10px 40px rgba(255, 215, 0, 0.2);
-    }
+    .feature-card h3 { color: #ffd700 !important; }
+    .feature-card p, .feature-card li { color: #e0e0e0 !important; }
     
-    /* 予想結果カード */
-    .prediction-card {
-        background: linear-gradient(145deg, #2d2d44, #1a1a2e);
-        border-radius: 15px;
+    /* 結果ボックス - 白背景で視認性確保 */
+    .result-box {
+        background: #ffffff;
+        border-radius: 12px;
         padding: 1.5rem;
         margin: 0.5rem 0;
-        border-left: 4px solid;
+        border-left: 5px solid #ffd700;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
     
-    .honmei { border-left-color: #ff0000; }
-    .taikou { border-left-color: #0066ff; }
-    .tananaa { border-left-color: #00cc00; }
-    .anaba { border-left-color: #ffcc00; }
-    .kiken { border-left-color: #666666; }
+    .result-box h4, .result-box p, .result-box li, .result-box span,
+    .result-box h1, .result-box h2, .result-box h3 {
+        color: #333333 !important;
+    }
     
-    /* ボタンスタイル */
-    .stButton > button {
-        background: linear-gradient(135deg, #ffd700, #ff8c00);
-        color: #1a1a2e;
+    /* 分析ボックス */
+    .analysis-box {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 1rem;
+        min-height: 280px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .analysis-box h1, .analysis-box h2, .analysis-box h3, .analysis-box h4,
+    .analysis-box p, .analysis-box li, .analysis-box span, .analysis-box td, .analysis-box th {
+        color: #333333 !important;
+    }
+    
+    .box-horse { border: 3px solid #e74c3c; }
+    .box-jockey { border: 3px solid #3498db; }
+    .box-course { border: 3px solid #27ae60; }
+    .box-total { border: 3px solid #f39c12; background: #fffef5; }
+    .box-events { border: 3px solid #9b59b6; }
+    .box-numbers { border: 3px solid #e67e22; }
+    .box-buy { border: 3px solid #c0392b; background: #fff8f8; }
+    
+    /* タイトルラベル */
+    .label {
+        font-size: 1.1rem;
         font-weight: 700;
-        font-size: 1.2rem;
-        padding: 0.8rem 3rem;
+        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.8rem;
+        text-align: center;
+        color: #ffffff !important;
+        display: inline-block;
+        width: 100%;
+    }
+    
+    .label-horse { background: #e74c3c; }
+    .label-jockey { background: #3498db; }
+    .label-course { background: #27ae60; }
+    .label-total { background: #f39c12; }
+    .label-events { background: #9b59b6; }
+    .label-numbers { background: #e67e22; }
+    .label-buy { background: #c0392b; }
+    
+    /* ボタン */
+    .stButton > button {
+        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
+        color: #1a1a2e !important;
+        font-weight: 700;
+        font-size: 1.1rem;
+        padding: 0.7rem 2rem;
         border-radius: 50px;
         border: none;
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
     }
     
     .stButton > button:hover {
         transform: scale(1.05);
-        box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
     }
     
-    /* 馬番入力 */
-    .stNumberInput > div > div > input {
-        background: rgba(255,255,255,0.1);
-        border: 2px solid rgba(255, 215, 0, 0.5);
-        border-radius: 10px;
-        color: white;
-        font-size: 1.5rem;
-        text-align: center;
-    }
-    
-    /* 結果表示エリア */
-    .result-area {
-        background: rgba(0,0,0,0.3);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-top: 2rem;
-        border: 1px solid rgba(255, 215, 0, 0.2);
-    }
-    
-    /* タブスタイル */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    
+    /* タブ */
     .stTabs [data-baseweb="tab"] {
-        background: rgba(255,255,255,0.1);
-        border-radius: 10px 10px 0 0;
-        color: white;
+        background: rgba(255,255,255,0.15);
+        color: #ffffff !important;
         font-weight: 600;
     }
     
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #ffd700, #ff8c00);
-        color: #1a1a2e;
-    }
-    
-    /* ローディングアニメーション */
-    .loading-horse {
-        font-size: 3rem;
-        animation: run 0.5s infinite;
-    }
-    
-    @keyframes run {
-        0%, 100% { transform: translateX(0); }
-        50% { transform: translateX(10px); }
+        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
+        color: #1a1a2e !important;
     }
     
     /* サイドバー */
-    .css-1d391kg {
+    section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #1a1a2e, #0f3460);
     }
     
-    /* 評価バー */
-    .eval-bar {
-        height: 20px;
-        border-radius: 10px;
-        background: linear-gradient(90deg, #ff6347, #ffd700, #00cc00);
-        margin: 0.5rem 0;
-    }
+    section[data-testid="stSidebar"] .stMarkdown { color: #ffffff !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# OpenAI クライアント設定
+# OpenAI クライアント
 # ============================================
 def get_openai_client():
-    """OpenAI クライアントを取得"""
     api_key = st.secrets.get("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY"))
     if not api_key:
-        st.error("⚠️ OpenAI API キーが設定されていません。Streamlit Secrets または環境変数に OPENAI_API_KEY を設定してください。")
+        st.error("⚠️ OpenAI API キーが設定されていません")
         return None
     return OpenAI(api_key=api_key)
-
 
 # ============================================
 # データ読み込み
 # ============================================
 @st.cache_data
-def load_race_data():
-    """予想用データの読み込み"""
+def load_race_data(uploaded_file=None):
     try:
-        df = pd.read_excel("data/arima_data.xlsx")
-        return df
-    except FileNotFoundError:
-        # サンプルデータを返す
-        return pd.DataFrame({
-            "馬番": range(1, 17),
-            "馬名": ["ドウデュース", "ジャスティンパレス", "スターズオンアース", "タスティエーラ", 
-                    "シャフリヤール", "ダノンベルーガ", "ソールオリエンス", "ライラック",
-                    "アーバンシック", "プログノーシス", "ベラジオオペラ", "シュトルーヴェ",
-                    "レガレイラ", "ローシャムパーク", "ディープボンド", "ハヤヤッコ"],
-            "性齢": ["牡5", "牡5", "牝5", "牡4", "牡6", "牡5", "牡4", "牝5",
-                    "牡4", "牡6", "牡4", "牡5", "牝4", "牝5", "牡7", "牡8"],
-            "騎手": ["武豊", "横山武史", "C.ルメール", "モレイラ", "川田将雅", "戸崎圭太",
-                    "横山和生", "M.デムーロ", "C.デムーロ", "吉田隼人", "レーン", "坂井瑠星",
-                    "北村宏司", "松山弘平", "幸英明", "団野大成"],
-            "調教師": ["友道康夫", "杉山晴紀", "高野友和", "堀宣行", "藤原英昭", "堀宣行",
-                      "手塚貴久", "矢作芳人", "池江泰寿", "中内田充正", "上村洋行", "池添学",
-                      "木村哲也", "田中博康", "大久保龍志", "清水久詞"],
-            "前走": ["天皇賞秋1着", "天皇賞秋3着", "エリザベス女王杯3着", "菊花賞1着",
-                    "天皇賞秋5着", "天皇賞秋7着", "天皇賞秋4着", "エリザベス女王杯5着",
-                    "菊花賞2着", "天皇賞秋2着", "天皇賞秋6着", "アルゼンチン共和国杯1着",
-                    "エリザベス女王杯1着", "天皇賞秋8着", "アルゼンチン共和国杯3着", "札幌記念2着"],
-            "オッズ": [3.5, 5.2, 6.8, 8.1, 12.5, 15.3, 18.6, 22.4,
-                     25.8, 28.9, 35.2, 42.6, 55.3, 68.9, 85.2, 120.5]
-        })
+        if uploaded_file is not None:
+            xlsx = pd.ExcelFile(uploaded_file)
+        else:
+            xlsx = pd.ExcelFile("data/arima_data.xlsx")
+        data = {}
+        for sheet in xlsx.sheet_names:
+            data[sheet] = pd.read_excel(xlsx, sheet_name=sheet)
+        return data
+    except:
+        return None
 
+def format_data_for_prompt(data):
+    formatted = ""
+    sheets = ["年齢", "枠順", "騎手", "血統", "前走クラス", "前走レース別", "馬体重増減"]
+    titles = ["年齢別期待値", "枠順別期待値", "騎手別期待値（中山2500m）", "血統（種牡馬）別期待値", 
+              "前走クラス別期待値", "前走レース別期待値", "馬体重増減別期待値"]
+    for sheet, title in zip(sheets, titles):
+        if sheet in data:
+            formatted += f"【{title}】\n{data[sheet].to_string(index=False)}\n\n"
+    return formatted
 
 # ============================================
-# 機能①: 総合予想
+# 出走馬データ
 # ============================================
-def comprehensive_prediction(client, df):
-    """総合予想を実行"""
-    
-    system_prompt = """あなたは競馬予想の専門家AIです。有馬記念の予想を行います。
+HORSE_LIST = {
+    1: {"馬名": "ダノンデサイル", "性齢": "牡3歳", "騎手": "横山典弘", "血統": "キタサンブラック", "前走": "菊花賞1着", "枠": 1},
+    2: {"馬名": "ジャスティンパレス", "性齢": "牡5歳", "騎手": "C.デムーロ", "血統": "ディープインパクト", "前走": "JC8着", "枠": 1},
+    3: {"馬名": "シャフリヤール", "性齢": "牡6歳", "騎手": "C.ルメール", "血統": "ディープインパクト", "前走": "JC6着", "枠": 2},
+    4: {"馬名": "ベラジオオペラ", "性齢": "牡4歳", "騎手": "横山武史", "血統": "ロードカナロア", "前走": "JC10着", "枠": 2},
+    5: {"馬名": "ブローザホーン", "性齢": "牡5歳", "騎手": "菅原明良", "血統": "エピファネイア", "前走": "JC11着", "枠": 3},
+    6: {"馬名": "ディープボンド", "性齢": "牡7歳", "騎手": "幸英明", "血統": "キズナ", "前走": "JC12着", "枠": 3},
+    7: {"馬名": "プログノーシス", "性齢": "牡6歳", "騎手": "川田将雅", "血統": "ディープインパクト", "前走": "JC4着", "枠": 4},
+    8: {"馬名": "アーバンシック", "性齢": "牡3歳", "騎手": "C.ルメール", "血統": "スワーヴリチャード", "前走": "菊花賞2着", "枠": 4},
+    9: {"馬名": "ドウデュース", "性齢": "牡5歳", "騎手": "武豊", "血統": "ハーツクライ", "前走": "天皇賞秋1着", "枠": 5},
+    10: {"馬名": "ローシャムパーク", "性齢": "牡5歳", "騎手": "戸崎圭太", "血統": "ハービンジャー", "前走": "JC5着", "枠": 5},
+    11: {"馬名": "レガレイラ", "性齢": "牝3歳", "騎手": "北村宏司", "血統": "スワーヴリチャード", "前走": "JC9着", "枠": 6},
+    12: {"馬名": "スターズオンアース", "性齢": "牝5歳", "騎手": "川田将雅", "血統": "ドゥラメンテ", "前走": "JC7着", "枠": 6},
+    13: {"馬名": "スタニングローズ", "性齢": "牝5歳", "騎手": "西村淳也", "血統": "キングカメハメハ", "前走": "エリ女5着", "枠": 7},
+    14: {"馬名": "シュトルーヴェ", "性齢": "牡5歳", "騎手": "松山弘平", "血統": "ドゥラメンテ", "前走": "ARC1着", "枠": 7},
+    15: {"馬名": "ダノンベルーガ", "性齢": "牡5歳", "騎手": "T.マーカンド", "血統": "ハーツクライ", "前走": "JC3着", "枠": 8},
+    16: {"馬名": "ハヤヤッコ", "性齢": "牡8歳", "騎手": "団野大成", "血統": "キングカメハメハ", "前走": "JC13着", "枠": 8},
+}
 
-【役割】
-- 提供されたデータを分析し、科学的かつ論理的な予想を行う
-- 各馬の能力、騎手、調教師、前走成績、オッズなどを総合的に評価
-- 中山競馬場2500mの特性（小回り、坂、非根幹距離）を考慮
-
-【出力形式】
-必ず以下の形式で予想を出力してください：
-
-## 🏆 有馬記念予想
-
-### 📌 本命馬（◎）
-**【馬番】馬名**
-選出理由：（2-3文で具体的に）
-
-### 📌 対抗馬（○）
-**【馬番】馬名**
-選出理由：（2-3文で具体的に）
-
-### 📌 単穴（▲）
-**【馬番】馬名**
-選出理由：（2-3文で具体的に）
-
-### 📌 穴馬（☆）
-**【馬番】馬名**
-選出理由：（2-3文で具体的に）
-
-### ⚠️ 危険馬（✕）
-**【馬番】馬名**
-注意点：（なぜ過信禁物か）
-
-### 💰 推奨買い目
-- **馬連**: ◎-○ を本線
-- **三連複**: ◎○▲ BOX
-- **三連単**: ◎→○→▲、◎→▲→○
-- **ワイド**: ◎-☆（穴狙い）
-
-### 📊 予想の根拠
-（全体的な分析コメント 3-4文）
-"""
-
-    user_prompt = f"""以下の出走馬データを分析し、有馬記念の予想を行ってください。
-
-【出走馬データ】
-{df.to_string(index=False)}
-
-中山競馬場2500mの特性と各馬の適性を考慮して、総合的に予想してください。
-"""
-
+HORSE_INFO_STR = """1枠1番 ダノンデサイル（牡3歳・横山典弘・キタサンブラック産駒・前走菊花賞1着）
+1枠2番 ジャスティンパレス（牡5歳・C.デムーロ・ディープインパクト産駒・前走JC8着）
+2枠3番 シャフリヤール（牡6歳・C.ルメール・ディープインパクト産駒・前走JC6着）
+2枠4番 ベラジオオペラ（牡4歳・横山武史・ロードカナロア産駒・前走JC10着）
+3枠5番 ブローザホーン（牡5歳・菅原明良・エピファネイア産駒・前走JC11着）
+3枠6番 ディープボンド（牡7歳・幸英明・キズナ産駒・前走JC12着）
+4枠7番 プログノーシス（牡6歳・川田将雅・ディープインパクト産駒・前走JC4着）
+4枠8番 アーバンシック（牡3歳・C.ルメール・スワーヴリチャード産駒・前走菊花賞2着）
+5枠9番 ドウデュース（牡5歳・武豊・ハーツクライ産駒・前走天皇賞秋1着）
+5枠10番 ローシャムパーク（牡5歳・戸崎圭太・ハービンジャー産駒・前走JC5着）
+6枠11番 レガレイラ（牝3歳・北村宏司・スワーヴリチャード産駒・前走JC9着）
+6枠12番 スターズオンアース（牝5歳・川田将雅・ドゥラメンテ産駒・前走JC7着）
+7枠13番 スタニングローズ（牝5歳・西村淳也・キングカメハメハ産駒・前走エリ女5着）
+7枠14番 シュトルーヴェ（牡5歳・松山弘平・ドゥラメンテ産駒・前走ARC1着）
+8枠15番 ダノンベルーガ（牡5歳・T.マーカンド・ハーツクライ産駒・前走JC3着）
+8枠16番 ハヤヤッコ（牡8歳・団野大成・キングカメハメハ産駒・前走JC13着）"""
+# ============================================
+# 機能①: 総合予想（3段階）
+# ============================================
+def analyze_data_summary(client, data):
+    system_prompt = """あなたは競馬データアナリストです。過去10年のデータから有馬記念で好走しやすい条件を分析してください。
+【出力】簡潔に箇条書きで
+- 年齢: 好走しやすい年齢
+- 枠順: 有利な枠
+- 騎手: 期待値の高い騎手TOP3
+- 血統: 好走血統TOP3
+- 前走: 好走しやすい前走レース
+- 馬体重: 好走しやすい増減幅"""
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7,
-            max_tokens=2000
-        )
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"データ分析:\n{format_data_for_prompt(data)}"}],
+            temperature=0.5, max_tokens=1000)
         return response.choices[0].message.content
     except Exception as e:
-        return f"エラーが発生しました: {str(e)}"
+        return f"エラー: {str(e)}"
 
-
-# ============================================
-# 機能②: 単体評価
-# ============================================
-def individual_evaluation(client, df, horse_number):
-    """指定した馬番の単体評価を実行"""
-    
-    horse_data = df[df["馬番"] == horse_number]
-    if horse_data.empty:
-        return "指定された馬番が見つかりません。"
-    
-    horse_info = horse_data.iloc[0].to_dict()
-    
-    system_prompt = """あなたは競馬予想の専門家AIです。指定された1頭の馬を多角的に分析します。
-
-【分析手順】
-STEP 1: 馬分析 - 馬自身の能力、血統、実績を評価
-STEP 2: 騎手分析 - 騎手の能力、コース相性、馬との相性を評価  
-STEP 3: コース分析 - 中山2500mへの適性を評価
-STEP 4: 統合評価 - 上記3つを統合した総合評価
-
+def predict_horses(client, data, analysis):
+    system_prompt = f"""あなたは競馬予想の専門家です。データ分析結果を踏まえ、推奨馬を選定してください。
+【出走馬】
+{HORSE_INFO_STR}
 【出力形式】
-必ず以下の形式で出力してください：
-
-## 🐴 馬分析（STEP 1）
-### 評価: ⭐⭐⭐⭐☆（5段階）
-**分析内容:**
-（馬の能力、血統背景、これまでの実績について3-4文で分析）
-
----
-
-## 🏇 騎手分析（STEP 2）
-### 評価: ⭐⭐⭐⭐☆（5段階）
-**分析内容:**
-（騎手の技量、中山での成績、当該馬との相性について3-4文で分析）
-
----
-
-## 🏟️ コース適性分析（STEP 3）
-### 評価: ⭐⭐⭐⭐☆（5段階）
-**分析内容:**
-（中山2500mへの適性、コーナリング、坂への対応について3-4文で分析）
-
----
-
-## 📊 統合評価（STEP 4）
-### 総合評価: ⭐⭐⭐⭐☆（5段階）
-### 期待度: A / B / C / D / E
-
-**統合コメント:**
-（3つの評価を統合した最終的な見解を4-5文で記述）
-
-**推奨:**
-- 単勝での購入: おすすめ / 様子見 / 非推奨
-- 連系馬券の軸: おすすめ / 様子見 / 非推奨
-- 穴馬として: おすすめ / 様子見 / 非推奨
-"""
-
-    user_prompt = f"""以下の馬を分析してください。
-
-【対象馬データ】
-- 馬番: {horse_info.get('馬番', 'N/A')}
-- 馬名: {horse_info.get('馬名', 'N/A')}
-- 性齢: {horse_info.get('性齢', 'N/A')}
-- 騎手: {horse_info.get('騎手', 'N/A')}
-- 調教師: {horse_info.get('調教師', 'N/A')}
-- 前走: {horse_info.get('前走', 'N/A')}
-- オッズ: {horse_info.get('オッズ', 'N/A')}倍
-
-中山競馬場2500mでの有馬記念に向けた分析をお願いします。
-"""
-
+◎本命: [馬番]馬名 - 選定理由
+○対抗: [馬番]馬名 - 選定理由
+▲単穴: [馬番]馬名 - 選定理由
+☆穴馬: [馬番]馬名 - 選定理由
+✕危険馬: [馬番]馬名 - 過信禁物な理由"""
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7,
-            max_tokens=2000
-        )
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"【分析結果】\n{analysis}"}],
+            temperature=0.7, max_tokens=1500)
         return response.choices[0].message.content
     except Exception as e:
-        return f"エラーが発生しました: {str(e)}"
+        return f"エラー: {str(e)}"
 
-
-# ============================================
-# 機能③: サイン理論
-# ============================================
-def sign_theory_prediction(client):
-    """サイン理論に基づく予想を実行"""
-    
-    system_prompt = """あなたは競馬のサイン理論の専門家AIです。
-サイン理論とは、社会的な出来事や数字の偶然の一致から馬券を予想する手法です。
-
-【分析手順】
-1. 2024年〜2025年の主要な出来事を列挙
-2. それらに関連する数字（日付、順位、記録など）を抽出
-3. 有馬記念との関連性を見出す
-4. 買い目を導出
-
+def suggest_betting(client, prediction):
+    system_prompt = """馬券アドバイザーとして買い目を提案してください。
 【出力形式】
-必ず以下の形式で出力してください：
-
-## 🔮 サイン理論分析
-
-### 📅 2024-2025年 注目の出来事
-
-#### 🏆 スポーツ関連
-1. **[出来事名]** - 関連数字: X
-   - サインの解釈: （どう馬券に結びつくか）
-
-2. **[出来事名]** - 関連数字: X
-   - サインの解釈: （どう馬券に結びつくか）
-
-#### 📰 社会・政治関連
-1. **[出来事名]** - 関連数字: X
-   - サインの解釈: （どう馬券に結びつくか）
-
-#### 🎭 芸能・エンタメ関連
-1. **[出来事名]** - 関連数字: X
-   - サインの解釈: （どう馬券に結びつくか）
-
----
-
-### 🔢 抽出された数字の整理
-| 出来事 | 数字 | 馬番/枠番への適用 |
-|--------|------|-------------------|
-| xxx | X | 馬番X |
-| xxx | X | 枠番X |
-
----
-
-### 💫 サイン理論からの導出
-
-**最重要サイン:**
-（最も強いサインとその根拠）
-
-**補助サイン:**
-（補完的なサインとその根拠）
-
----
-
-### 💰 サイン理論推奨買い目
-
-**◎ メイン買い目**
-- 馬連: X-X
-- 三連複: X-X-X
-
-**○ サブ買い目**
-- ワイド: X-X
-- 馬単: X→X
-
-**注意:** サイン理論はあくまでエンターテイメントです。投資は自己責任で！
-"""
-
-    user_prompt = """2024年から2025年にかけての日本での主要な出来事を思い出し、
-サイン理論に基づいて有馬記念の買い目を導出してください。
-
-特に以下の観点から数字を抽出してください：
-- 大谷翔平の活躍（本塁打数、打点、背番号など）
-- パリオリンピックでの日本のメダル
-- 政治関連（選挙、首相交代など）
-- 芸能ニュース（結婚、引退など）
-- 社会現象（流行語、ヒット商品など）
-
-それぞれの数字を馬番や枠番に紐づけて、買い目を提案してください。
-"""
-
+■ 本線（堅実）馬連・ワイド
+■ 勝負（中配当）三連複・三連単
+■ 穴狙い ワイド・三連複
+■ 投資配分"""
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.9,  # 創造性を高める
-            max_tokens=2500
-        )
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"予想:\n{prediction}"}],
+            temperature=0.6, max_tokens=1000)
         return response.choices[0].message.content
     except Exception as e:
-        return f"エラーが発生しました: {str(e)}"
+        return f"エラー: {str(e)}"
 
+# ============================================
+# 機能②: 単体評価（4段階）
+# ============================================
+def analyze_horse(client, horse_info, data):
+    system_prompt = """馬の能力を分析。【出力】■ 評価: ★5段階 ■ 血統評価(2-3文) ■ 年齢評価(2-3文) ■ 能力・実績(2-3文)"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"馬名:{horse_info['馬名']} 性齢:{horse_info['性齢']} 血統:{horse_info['血統']} 前走:{horse_info['前走']}\n{format_data_for_prompt(data)}"}],
+            temperature=0.6, max_tokens=800)
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"エラー: {str(e)}"
 
+def analyze_jockey(client, horse_info, data):
+    system_prompt = """騎手を分析。【出力】■ 評価: ★5段階 ■ コース成績(2-3文) ■ 騎乗スタイル(2-3文) ■ 馬との相性(2-3文)"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"騎手:{horse_info['騎手']} 騎乗馬:{horse_info['馬名']}\n{format_data_for_prompt(data)}"}],
+            temperature=0.6, max_tokens=800)
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"エラー: {str(e)}"
+
+def analyze_course(client, horse_info, data):
+    system_prompt = """コース適性を分析。【出力】■ 評価: ★5段階 ■ 枠順評価(2-3文) ■ コース適性(2-3文) ■ 展開予想(2-3文)"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"馬名:{horse_info['馬名']} 枠:{horse_info['枠']}枠 前走:{horse_info['前走']}\n{format_data_for_prompt(data)}"}],
+            temperature=0.6, max_tokens=800)
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"エラー: {str(e)}"
+
+def analyze_total(client, horse_info, h_res, j_res, c_res):
+    system_prompt = """3分析を統合して総合評価。【出力】■ 総合評価: ★5段階 ■ 期待度: A-E ■ 総評(4-5文) ■ 馬券的妙味(単勝/連軸/穴馬) ■ 一言"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"【{horse_info['馬名']}】\n馬分析:{h_res}\n騎手分析:{j_res}\nコース分析:{c_res}"}],
+            temperature=0.6, max_tokens=800)
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"エラー: {str(e)}"
+
+# ============================================
+# 機能③: サイン理論（3段階）
+# ============================================
+def get_events_2024(client):
+    system_prompt = """2024-2025年の日本の出来事を列挙。【カテゴリ】スポーツ/政治/芸能/社会現象 各3-4個"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": "2024-2025年の主要な出来事を教えてください"}],
+            temperature=0.8, max_tokens=1000)
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"エラー: {str(e)}"
+
+def extract_numbers(client, events):
+    system_prompt = """出来事から馬番に使える数字を抽出。【出力】表形式で 出来事|数字|意味 ※16以下優先"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"出来事:\n{events}"}],
+            temperature=0.7, max_tokens=1000)
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"エラー: {str(e)}"
+
+def sign_betting(client, events, numbers):
+    system_prompt = f"""サイン理論から買い目を導出。
+【馬番】1ダノンデサイル 2ジャスティンパレス 3シャフリヤール 4ベラジオオペラ 5ブローザホーン 6ディープボンド 7プログノーシス 8アーバンシック 9ドウデュース 10ローシャムパーク 11レガレイラ 12スターズオンアース 13スタニングローズ 14シュトルーヴェ 15ダノンベルーガ 16ハヤヤッコ
+【出力】■ 最重要サイン→馬番 ■ 準重要サイン→馬番 ■ 買い目(馬連/三連複/ワイド) ■ 大穴予想
+⚠️エンターテイメントです！"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "system", "content": system_prompt},
+                      {"role": "user", "content": f"出来事:\n{events}\n数字:\n{numbers}"}],
+            temperature=0.9, max_tokens=1000)
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"エラー: {str(e)}"
 # ============================================
 # メインUI
 # ============================================
 def main():
-    # ヘッダー
     st.markdown('<h1 class="main-title">🏇 有馬記念予想 2024</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-title">AI × データ分析 × サイン理論</p>', unsafe_allow_html=True)
     
-    # クライアント初期化
     client = get_openai_client()
-    
-    # データ読み込み
-    df = load_race_data()
     
     # サイドバー
     with st.sidebar:
         st.markdown("### ⚙️ 設定")
+        uploaded_file = st.file_uploader("📁 予想データ", type=["xlsx", "xls"])
         
-        # データアップロード
-        uploaded_file = st.file_uploader(
-            "📁 予想データをアップロード",
-            type=["xlsx", "xls"],
-            help="Excelファイル形式でアップロードしてください"
-        )
-        
-        if uploaded_file is not None:
-            df = pd.read_excel(uploaded_file)
-            st.success("✅ データを読み込みました！")
+        if uploaded_file:
+            data = load_race_data(uploaded_file)
+            st.success("✅ データ読み込み完了")
+        else:
+            data = load_race_data()
+            if data:
+                st.info("📊 デフォルトデータ使用中")
+            else:
+                data = {}
         
         st.markdown("---")
-        
-        # 出走馬一覧
-        st.markdown("### 📋 出走馬一覧")
-        for _, row in df.iterrows():
-            st.markdown(f"**{row['馬番']}** {row['馬名']} ({row['騎手']})")
+        st.markdown("### 🐴 出走馬")
+        for num, info in HORSE_LIST.items():
+            st.markdown(f"**{num}** {info['馬名']}")
     
-    # メインコンテンツ - タブ構成
-    tab1, tab2, tab3 = st.tabs([
-        "🎯 総合予想",
-        "🔍 単体評価", 
-        "🔮 サイン理論"
-    ])
+    # タブ
+    tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
     
-    # ============================================
     # タブ1: 総合予想
-    # ============================================
     with tab1:
-        st.markdown("""
-        <div class="feature-card">
+        st.markdown("""<div class="feature-card">
             <h3>🎯 総合予想機能</h3>
-            <p>出走馬のデータを総合的に分析し、本命から穴馬まで予想します。</p>
-            <ul>
-                <li>◎本命、○対抗、▲単穴、☆穴馬、✕危険馬</li>
-                <li>推奨買い目（馬連・三連複・三連単・ワイド）</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+            <p>STEP1: データ傾向分析 → STEP2: 馬の選定 → STEP3: 買い目提案</p>
+        </div>""", unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🚀 予想スタート", key="comprehensive", use_container_width=True):
-                if client:
-                    with st.spinner("🏇 AIが分析中..."):
-                        result = comprehensive_prediction(client, df)
-                    
-                    st.markdown("---")
-                    st.markdown('<div class="result-area">', unsafe_allow_html=True)
-                    st.markdown(result)
-                    st.markdown('</div>', unsafe_allow_html=True)
+            start_btn = st.button("🚀 予想スタート", key="comp", use_container_width=True)
+        
+        if start_btn and client and data:
+            st.markdown("### STEP1: データ傾向分析")
+            with st.spinner("📊 分析中..."):
+                step1 = analyze_data_summary(client, data)
+            st.markdown(f'<div class="result-box"><h4>📊 データ傾向</h4>{step1}</div>', unsafe_allow_html=True)
+            
+            st.markdown("### STEP2: 馬の選定")
+            with st.spinner("🐴 評価中..."):
+                step2 = predict_horses(client, data, step1)
+            st.markdown(f'<div class="result-box"><h4>🏇 推奨馬</h4>{step2}</div>', unsafe_allow_html=True)
+            
+            st.markdown("### STEP3: 買い目提案")
+            with st.spinner("💰 検討中..."):
+                step3 = suggest_betting(client, step2)
+            st.markdown(f'<div class="result-box"><h4>💰 買い目</h4>{step3}</div>', unsafe_allow_html=True)
     
-    # ============================================
     # タブ2: 単体評価
-    # ============================================
     with tab2:
-        st.markdown("""
-        <div class="feature-card">
+        st.markdown("""<div class="feature-card">
             <h3>🔍 単体評価機能</h3>
-            <p>指定した馬を多角的に分析します。</p>
-            <ul>
-                <li>馬分析（能力・血統・実績）</li>
-                <li>騎手分析（技量・コース相性）</li>
-                <li>コース適性分析（中山2500m適性）</li>
-                <li>統合評価（総合的な期待度）</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+            <p>馬・騎手・コースの3軸で分析 → 統合評価</p>
+        </div>""", unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            horse_number = st.number_input(
-                "🎰 馬番を入力",
-                min_value=1,
-                max_value=len(df),
-                value=1,
-                step=1
-            )
+            horse_num = st.selectbox("🎰 馬番を選択", list(HORSE_LIST.keys()),
+                                     format_func=lambda x: f"{x}番 {HORSE_LIST[x]['馬名']} ({HORSE_LIST[x]['騎手']})")
+            eval_btn = st.button("🔍 評価スタート", key="eval", use_container_width=True)
+        
+        if eval_btn and client and data:
+            horse_info = HORSE_LIST[horse_num]
+            st.markdown(f"## {horse_num}番 {horse_info['馬名']} の分析")
             
-            # 選択した馬の情報を表示
-            selected_horse = df[df["馬番"] == horse_number]
-            if not selected_horse.empty:
-                horse = selected_horse.iloc[0]
-                st.info(f"**選択中:** {horse['馬番']}番 {horse['馬名']} ({horse['騎手']})")
+            # 3列レイアウト
+            col_h, col_j, col_c = st.columns(3)
             
-            if st.button("🔍 評価スタート", key="individual", use_container_width=True):
-                if client:
-                    with st.spinner(f"🏇 {horse_number}番を分析中..."):
-                        result = individual_evaluation(client, df, horse_number)
-                    
-                    st.markdown("---")
-                    st.markdown('<div class="result-area">', unsafe_allow_html=True)
-                    st.markdown(result)
-                    st.markdown('</div>', unsafe_allow_html=True)
+            with col_h:
+                st.markdown('<div class="label label-horse">🐴 馬分析</div>', unsafe_allow_html=True)
+                ph_h = st.empty()
+                ph_h.info("分析中...")
+            with col_j:
+                st.markdown('<div class="label label-jockey">🏇 騎手分析</div>', unsafe_allow_html=True)
+                ph_j = st.empty()
+                ph_j.info("待機中...")
+            with col_c:
+                st.markdown('<div class="label label-course">🏟️ コース分析</div>', unsafe_allow_html=True)
+                ph_c = st.empty()
+                ph_c.info("待機中...")
+            
+            st.markdown("---")
+            st.markdown('<div class="label label-total">📊 総合評価</div>', unsafe_allow_html=True)
+            ph_t = st.empty()
+            ph_t.info("待機中...")
+            
+            # 馬分析
+            h_res = analyze_horse(client, horse_info, data)
+            ph_h.markdown(f'<div class="analysis-box box-horse">{h_res}</div>', unsafe_allow_html=True)
+            
+            # 騎手分析
+            ph_j.info("分析中...")
+            j_res = analyze_jockey(client, horse_info, data)
+            ph_j.markdown(f'<div class="analysis-box box-jockey">{j_res}</div>', unsafe_allow_html=True)
+            
+            # コース分析
+            ph_c.info("分析中...")
+            c_res = analyze_course(client, horse_info, data)
+            ph_c.markdown(f'<div class="analysis-box box-course">{c_res}</div>', unsafe_allow_html=True)
+            
+            # 総合評価
+            ph_t.info("統合中...")
+            t_res = analyze_total(client, horse_info, h_res, j_res, c_res)
+            ph_t.markdown(f'<div class="analysis-box box-total">{t_res}</div>', unsafe_allow_html=True)
     
-    # ============================================
     # タブ3: サイン理論
-    # ============================================
     with tab3:
-        st.markdown("""
-        <div class="feature-card">
+        st.markdown("""<div class="feature-card">
             <h3>🔮 サイン理論機能</h3>
-            <p>2024-2025年の出来事から数字を読み解き、馬券を導出します。</p>
-            <ul>
-                <li>スポーツ・政治・芸能などの出来事</li>
-                <li>関連する数字の抽出</li>
-                <li>馬番・枠番との紐付け</li>
-                <li>サイン理論に基づく買い目</li>
-            </ul>
-            <p><small>※サイン理論はエンターテイメントとしてお楽しみください</small></p>
-        </div>
-        """, unsafe_allow_html=True)
+            <p>2024-2025年の出来事から数字を読み解く ※エンターテイメント</p>
+        </div>""", unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🔮 サイン分析スタート", key="sign", use_container_width=True):
-                if client:
-                    with st.spinner("🔮 サインを読み解き中..."):
-                        result = sign_theory_prediction(client)
-                    
-                    st.markdown("---")
-                    st.markdown('<div class="result-area">', unsafe_allow_html=True)
-                    st.markdown(result)
-                    st.markdown('</div>', unsafe_allow_html=True)
+            sign_btn = st.button("🔮 サイン分析", key="sign", use_container_width=True)
+        
+        if sign_btn and client:
+            # 2列レイアウト
+            col_e, col_n = st.columns(2)
+            
+            with col_e:
+                st.markdown('<div class="label label-events">📅 出来事一覧</div>', unsafe_allow_html=True)
+                ph_e = st.empty()
+                ph_e.info("収集中...")
+            with col_n:
+                st.markdown('<div class="label label-numbers">🔢 抽出数字</div>', unsafe_allow_html=True)
+                ph_n = st.empty()
+                ph_n.info("待機中...")
+            
+            st.markdown("---")
+            st.markdown('<div class="label label-buy">💰 サイン理論買い目</div>', unsafe_allow_html=True)
+            ph_b = st.empty()
+            ph_b.info("待機中...")
+            
+            # 出来事
+            e_res = get_events_2024(client)
+            ph_e.markdown(f'<div class="analysis-box box-events">{e_res}</div>', unsafe_allow_html=True)
+            
+            # 数字抽出
+            ph_n.info("抽出中...")
+            n_res = extract_numbers(client, e_res)
+            ph_n.markdown(f'<div class="analysis-box box-numbers">{n_res}</div>', unsafe_allow_html=True)
+            
+            # 買い目
+            ph_b.info("導出中...")
+            b_res = sign_betting(client, e_res, n_res)
+            ph_b.markdown(f'<div class="analysis-box box-buy">{b_res}</div>', unsafe_allow_html=True)
     
     # フッター
     st.markdown("---")
-    st.markdown("""
-    <div style="text-align: center; color: #888; padding: 2rem;">
-        <p>⚠️ 本アプリの予想は参考情報です。馬券購入は自己責任でお願いします。</p>
-        <p>🏇 ARIMA KINEN PREDICTOR 2024 | Powered by OpenAI GPT-4o</p>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown("""<div style="text-align:center;color:#999;padding:1rem;">
+        ⚠️ 予想は参考情報です。馬券購入は自己責任で。<br>
+        🏇 ARIMA PREDICTOR 2024 | Powered by GPT-4o
+    </div>""", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
