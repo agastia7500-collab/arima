@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 from openai import OpenAI
 import os
+import html
 
 # ============================================
 # ページ設定
@@ -20,18 +21,41 @@ st.set_page_config(
 
 # ============================================
 # セッション状態（タブ切替でも結果を保持）
-# ※ widget key と衝突しない名前にする
 # ============================================
 if "comp_results" not in st.session_state:
     st.session_state["comp_results"] = {"step1": None, "step2": None, "step3": None}
 if "eval_results" not in st.session_state:
-    # horse_num -> {"h":..., "j":..., "c":..., "t":...}
     st.session_state["eval_results"] = {}
 if "sign_results" not in st.session_state:
     st.session_state["sign_results"] = {"events": None, "numbers": None, "bet": None}
 
 # ============================================
-# カスタムCSS（白背景の箱は必ず黒文字）
+# 表示ヘルパー（白文字問題の根本対策）
+# - LLM出力をMarkdownとして解釈させず、HTMLエスケープして箱の中に固定
+# ============================================
+def text_to_safe_html(text: str) -> str:
+    if text is None:
+        return ""
+    # HTMLエスケープしてから改行を<br>に
+    s = html.escape(str(text))
+    s = s.replace("\n", "<br>")
+    # 見た目用：先頭の "- " を "• " に（箇条書きっぽく）
+    s = s.replace("<br>- ", "<br>• ")
+    if s.startswith("- "):
+        s = "• " + s[2:]
+    return s
+
+def render_box(title: str, body_text: str, box_class: str = "result-box") -> str:
+    body = text_to_safe_html(body_text)
+    return f"""
+    <div class="{box_class}">
+      <div class="box-title">{html.escape(title)}</div>
+      <div class="box-body">{body}</div>
+    </div>
+    """
+
+# ============================================
+# カスタムCSS
 # ============================================
 st.markdown("""
 <style>
@@ -42,23 +66,13 @@ st.markdown("""
         font-family: 'Noto Sans JP', sans-serif;
     }
 
-    /* 全体（表示系）は白 */
+    /* 基本テキストは白 */
     .stMarkdown, .stMarkdown p, .stMarkdown li, .stMarkdown span,
     h1, h2, h3, h4, h5, h6 {
         color: #ffffff !important;
     }
 
-    /* 見出しが灰色になるのを抑止 */
-    div[data-testid="stMarkdownContainer"] h1,
-    div[data-testid="stMarkdownContainer"] h2,
-    div[data-testid="stMarkdownContainer"] h3,
-    div[data-testid="stMarkdownContainer"] h4,
-    div[data-testid="stMarkdownContainer"] h5,
-    div[data-testid="stMarkdownContainer"] h6,
-    div[data-testid="stMarkdownContainer"] a {
-        color: #ffffff !important;
-    }
-
+    /* タイトル */
     .main-title {
         font-size: 3rem;
         font-weight: 900;
@@ -68,7 +82,6 @@ st.markdown("""
         text-align: center;
         padding: 1rem 0;
     }
-
     .sub-title {
         font-size: 1.1rem;
         color: #e0e0e0 !important;
@@ -77,6 +90,7 @@ st.markdown("""
         letter-spacing: 0.2em;
     }
 
+    /* 機能説明カード */
     .feature-card {
         background: rgba(255,255,255,0.1);
         border-radius: 15px;
@@ -84,32 +98,40 @@ st.markdown("""
         border: 1px solid rgba(255, 215, 0, 0.3);
         margin: 1rem 0;
     }
-
     .feature-card h3 { color: #ffd700 !important; }
     .feature-card p, .feature-card li { color: #e0e0e0 !important; }
 
-    /* 結果ボックス（白背景→黒文字：テキストノードも黒） */
+    /* 結果ボックス：黒文字を100%保証 */
     .result-box {
         background: #ffffff;
         border-radius: 12px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
+        padding: 1.2rem 1.3rem;
+        margin: 0.6rem 0;
         border-left: 5px solid #ffd700;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.25);
         color: #111111 !important;
     }
-    .result-box * { color: #111111 !important; }
-
-    /* 分析ボックス（白背景→黒文字：テキストノードも黒） */
     .analysis-box {
         background: #ffffff;
         border-radius: 12px;
-        padding: 1rem;
+        padding: 1rem 1.1rem;
         min-height: 280px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.20);
         color: #111111 !important;
     }
-    .analysis-box * { color: #111111 !important; }
+    .box-title{
+        font-weight: 800;
+        font-size: 1.05rem;
+        margin-bottom: 0.6rem;
+        color: #111111 !important;
+    }
+    .box-body{
+        font-size: 0.98rem;
+        line-height: 1.7;
+        color: #111111 !important;
+        white-space: normal;
+        word-break: break-word;
+    }
 
     .box-horse { border: 3px solid #e74c3c; }
     .box-jockey { border: 3px solid #3498db; }
@@ -119,12 +141,12 @@ st.markdown("""
     .box-numbers { border: 3px solid #e67e22; }
     .box-buy { border: 3px solid #c0392b; background: #fff8f8; }
 
-    /* タイトルラベル */
+    /* ラベル（機能2の流儀） */
     .label {
-        font-size: 1.1rem;
-        font-weight: 700;
-        padding: 0.4rem 1rem;
-        border-radius: 6px;
+        font-size: 1.05rem;
+        font-weight: 800;
+        padding: 0.45rem 1rem;
+        border-radius: 8px;
         margin-bottom: 0.8rem;
         text-align: center;
         color: #ffffff !important;
@@ -135,6 +157,9 @@ st.markdown("""
     .label-jockey { background: #3498db; }
     .label-course { background: #27ae60; }
     .label-total { background: #f39c12; }
+    .label-step1 { background: #2c3e50; }
+    .label-step2 { background: #34495e; }
+    .label-step3 { background: #7f8c8d; }
     .label-events { background: #9b59b6; }
     .label-numbers { background: #e67e22; }
     .label-buy { background: #c0392b; }
@@ -143,22 +168,22 @@ st.markdown("""
     .stButton > button {
         background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
         color: #1a1a2e !important;
-        font-weight: 700;
+        font-weight: 800;
         font-size: 1.1rem;
         padding: 0.7rem 2rem;
         border-radius: 50px;
         border: none;
     }
     .stButton > button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+        transform: scale(1.03);
+        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.35);
     }
 
     /* タブ */
     .stTabs [data-baseweb="tab"] {
         background: rgba(255,255,255,0.15);
         color: #ffffff !important;
-        font-weight: 600;
+        font-weight: 700;
     }
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
@@ -171,13 +196,11 @@ st.markdown("""
     }
     section[data-testid="stSidebar"] .stMarkdown { color: #ffffff !important; }
 
-    /* Selectbox の文字を黒（白背景想定） */
+    /* Selectbox 文字を黒 */
     div[data-baseweb="select"] * { color: #000000 !important; }
 
-    /* Streamlitのinfo/success/warning内の文字色（濃い青で見えにくい対策） */
-    div[data-testid="stAlert"] * {
-        color: #ffffff !important;
-    }
+    /* info/success/warning の文字を白（暗い背景で見えるように） */
+    div[data-testid="stAlert"] * { color: #ffffff !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -261,7 +284,7 @@ HORSE_INFO_STR_2025 = """【2025年有馬記念 出走予定馬】※枠順未�
 シュヴァリエローズ（牡4歳・未定・キズナ産駒・前走宝塚記念4着）"""
 
 # ============================================
-# 機能①: 総合予想
+# 機能①: 総合予想（3段階）
 # ============================================
 def analyze_data_summary(client, data):
     system_prompt = """あなたは競馬データアナリストです。過去10年のデータから有馬記念で好走しやすい条件を分析してください。
@@ -313,7 +336,7 @@ def suggest_betting(client, prediction):
     return r.choices[0].message.content
 
 # ============================================
-# 機能②: 単体評価
+# 機能②: 単体評価（4段階）
 # ============================================
 def analyze_horse(client, horse_info, data):
     system_prompt = "馬の能力を分析。【出力】■ 評価: ★5段階 ■ 血統評価(2-3文) ■ 年齢評価(2-3文) ■ 能力・実績(2-3文)"
@@ -356,7 +379,7 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
     return r.choices[0].message.content
 
 # ============================================
-# 機能③: サイン理論
+# 機能③: サイン理論（3段階）
 # ============================================
 def get_events_2025(client):
     system_prompt = """あなたは2025年の日本のニュース・出来事に詳しい専門家です。
@@ -436,7 +459,8 @@ def main():
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
     # =========================
-    # タブ1: 総合予想（STEPごとに即表示＋保持）
+    # タブ1: 総合予想
+    # 要望：機能2の流儀に寄せる（押すまで空 / 押したら進捗 / 段階ごとに箱に表示）
     # =========================
     with tab1:
         st.markdown("""<div class="feature-card">
@@ -448,40 +472,45 @@ def main():
         with col2:
             start_btn = st.button("🚀 予想スタート", key="comp_btn", use_container_width=True)
 
-        step1_ph = st.empty()
-        step2_ph = st.empty()
-        step3_ph = st.empty()
-
         comp = st.session_state["comp_results"]
 
+        # ラベル + placeholder（初期は空）
+        st.markdown('<div class="label label-step1">STEP1: データ傾向分析</div>', unsafe_allow_html=True)
+        ph1 = st.empty()
+
+        st.markdown('<div class="label label-step2">STEP2: 馬の選定</div>', unsafe_allow_html=True)
+        ph2 = st.empty()
+
+        st.markdown('<div class="label label-step3">STEP3: 買い目提案</div>', unsafe_allow_html=True)
+        ph3 = st.empty()
+
+        # 既存結果を表示（タブ切替でも残る）
         if comp["step1"]:
-            step1_ph.markdown(f'<div class="result-box"><h4>📊 データ傾向</h4>{comp["step1"]}</div>', unsafe_allow_html=True)
+            ph1.markdown(render_box("📊 データ傾向", comp["step1"], "result-box"), unsafe_allow_html=True)
         if comp["step2"]:
-            step2_ph.markdown(f'<div class="result-box"><h4>🏇 推奨馬</h4>{comp["step2"]}</div>', unsafe_allow_html=True)
+            ph2.markdown(render_box("🏇 推奨馬", comp["step2"], "result-box"), unsafe_allow_html=True)
         if comp["step3"]:
-            step3_ph.markdown(f'<div class="result-box"><h4>💰 買い目</h4>{comp["step3"]}</div>', unsafe_allow_html=True)
+            ph3.markdown(render_box("💰 買い目", comp["step3"], "result-box"), unsafe_allow_html=True)
 
         if start_btn:
             if client is None:
                 st.error("APIキーを設定してください")
             else:
-                st.markdown("### STEP1: データ傾向分析")
-                with st.spinner("📊 分析中..."):
-                    comp["step1"] = analyze_data_summary(client, data)
-                step1_ph.markdown(f'<div class="result-box"><h4>📊 データ傾向</h4>{comp["step1"]}</div>', unsafe_allow_html=True)
+                ph1.info("📊 分析中...")
+                comp["step1"] = analyze_data_summary(client, data)
+                ph1.markdown(render_box("📊 データ傾向", comp["step1"], "result-box"), unsafe_allow_html=True)
 
-                st.markdown("### STEP2: 馬の選定")
-                with st.spinner("🐴 評価中..."):
-                    comp["step2"] = predict_horses(client, data, comp["step1"])
-                step2_ph.markdown(f'<div class="result-box"><h4>🏇 推奨馬</h4>{comp["step2"]}</div>', unsafe_allow_html=True)
+                ph2.info("🐴 評価中...")
+                comp["step2"] = predict_horses(client, data, comp["step1"])
+                ph2.markdown(render_box("🏇 推奨馬", comp["step2"], "result-box"), unsafe_allow_html=True)
 
-                st.markdown("### STEP3: 買い目提案")
-                with st.spinner("💰 検討中..."):
-                    comp["step3"] = suggest_betting(client, comp["step2"])
-                step3_ph.markdown(f'<div class="result-box"><h4>💰 買い目</h4>{comp["step3"]}</div>', unsafe_allow_html=True)
+                ph3.info("💰 検討中...")
+                comp["step3"] = suggest_betting(client, comp["step2"])
+                ph3.markdown(render_box("💰 買い目", comp["step3"], "result-box"), unsafe_allow_html=True)
 
     # =========================
-    # タブ2: 単体評価（初期は空／押したらinfo進捗＋保持）
+    # タブ2: 単体評価
+    # 要望：白文字問題を完全修正（render_boxでHTML化）、挙動は元に寄せる
     # =========================
     with tab2:
         st.markdown("""<div class="feature-card">
@@ -519,41 +548,42 @@ def main():
 
         saved = st.session_state["eval_results"].get(horse_num)
 
-        # 保存済みがあれば表示（押すまで何も出さない、という元挙動）
+        # 保存済みがあれば表示（押すまで空、は維持。ただし保存がある場合だけ表示）
         if saved and not eval_btn:
-            ph_h.markdown(f'<div class="analysis-box box-horse">{saved["h"]}</div>', unsafe_allow_html=True)
-            ph_j.markdown(f'<div class="analysis-box box-jockey">{saved["j"]}</div>', unsafe_allow_html=True)
-            ph_c.markdown(f'<div class="analysis-box box-course">{saved["c"]}</div>', unsafe_allow_html=True)
-            ph_t.markdown(f'<div class="analysis-box box-total">{saved["t"]}</div>', unsafe_allow_html=True)
+            ph_h.markdown(render_box("🐴 馬分析", saved["h"], "analysis-box box-horse"), unsafe_allow_html=True)
+            ph_j.markdown(render_box("🏇 騎手分析", saved["j"], "analysis-box box-jockey"), unsafe_allow_html=True)
+            ph_c.markdown(render_box("🏟️ コース分析", saved["c"], "analysis-box box-course"), unsafe_allow_html=True)
+            ph_t.markdown(render_box("📊 総合評価", saved["t"], "analysis-box box-total"), unsafe_allow_html=True)
 
         if eval_btn:
             if client is None:
                 st.error("APIキーを設定してください")
             else:
                 ph_h.info("分析中...")
-                ph_j.info("待機中...")
-                ph_c.info("待機中...")
-                ph_t.info("待機中...")
+                ph_j.empty()
+                ph_c.empty()
+                ph_t.empty()
 
                 h_res = analyze_horse(client, horse_info, data)
-                ph_h.markdown(f'<div class="analysis-box box-horse">{h_res}</div>', unsafe_allow_html=True)
+                ph_h.markdown(render_box("🐴 馬分析", h_res, "analysis-box box-horse"), unsafe_allow_html=True)
 
                 ph_j.info("分析中...")
                 j_res = analyze_jockey(client, horse_info, data)
-                ph_j.markdown(f'<div class="analysis-box box-jockey">{j_res}</div>', unsafe_allow_html=True)
+                ph_j.markdown(render_box("🏇 騎手分析", j_res, "analysis-box box-jockey"), unsafe_allow_html=True)
 
                 ph_c.info("分析中...")
                 c_res = analyze_course(client, horse_info, data)
-                ph_c.markdown(f'<div class="analysis-box box-course">{c_res}</div>', unsafe_allow_html=True)
+                ph_c.markdown(render_box("🏟️ コース分析", c_res, "analysis-box box-course"), unsafe_allow_html=True)
 
                 ph_t.info("統合中...")
                 t_res = analyze_total(client, horse_info, h_res, j_res, c_res)
-                ph_t.markdown(f'<div class="analysis-box box-total">{t_res}</div>', unsafe_allow_html=True)
+                ph_t.markdown(render_box("📊 総合評価", t_res, "analysis-box box-total"), unsafe_allow_html=True)
 
                 st.session_state["eval_results"][horse_num] = {"h": h_res, "j": j_res, "c": c_res, "t": t_res}
 
     # =========================
-    # タブ3: サイン理論（保持）
+    # タブ3: サイン理論
+    # 要望：白文字問題を完全修正（render_boxでHTML化）、途中から白も潰す
     # =========================
     with tab3:
         st.markdown("""<div class="feature-card">
@@ -579,12 +609,13 @@ def main():
 
         sign = st.session_state["sign_results"]
 
+        # 既存結果
         if sign["events"]:
-            ph_e.markdown(f'<div class="analysis-box box-events">{sign["events"]}</div>', unsafe_allow_html=True)
+            ph_e.markdown(render_box("📅 2025年の出来事", sign["events"], "analysis-box box-events"), unsafe_allow_html=True)
         if sign["numbers"]:
-            ph_n.markdown(f'<div class="analysis-box box-numbers">{sign["numbers"]}</div>', unsafe_allow_html=True)
+            ph_n.markdown(render_box("🔢 抽出数字", sign["numbers"], "analysis-box box-numbers"), unsafe_allow_html=True)
         if sign["bet"]:
-            ph_b.markdown(f'<div class="analysis-box box-buy">{sign["bet"]}</div>', unsafe_allow_html=True)
+            ph_b.markdown(render_box("💰 サイン理論買い目", sign["bet"], "analysis-box box-buy"), unsafe_allow_html=True)
 
         if sign_btn:
             if client is None:
@@ -593,18 +624,19 @@ def main():
                 ph_e.info("収集中...")
                 e_res = get_events_2025(client)
                 sign["events"] = e_res
-                ph_e.markdown(f'<div class="analysis-box box-events">{e_res}</div>', unsafe_allow_html=True)
+                ph_e.markdown(render_box("📅 2025年の出来事", e_res, "analysis-box box-events"), unsafe_allow_html=True)
 
                 ph_n.info("抽出中...")
                 n_res = extract_numbers(client, e_res)
                 sign["numbers"] = n_res
-                ph_n.markdown(f'<div class="analysis-box box-numbers">{n_res}</div>', unsafe_allow_html=True)
+                ph_n.markdown(render_box("🔢 抽出数字", n_res, "analysis-box box-numbers"), unsafe_allow_html=True)
 
                 ph_b.info("導出中...")
                 b_res = sign_betting(client, e_res, n_res)
                 sign["bet"] = b_res
-                ph_b.markdown(f'<div class="analysis-box box-buy">{b_res}</div>', unsafe_allow_html=True)
+                ph_b.markdown(render_box("💰 サイン理論買い目", b_res, "analysis-box box-buy"), unsafe_allow_html=True)
 
+    # フッター
     st.markdown("---")
     st.markdown("""<div style="text-align:center;color:#999;padding:1rem;">
         ⚠️ 予想は参考情報です。馬券購入は自己責任で。<br>
