@@ -36,10 +36,8 @@ if "sign_results" not in st.session_state:
 def text_to_safe_html(text: str) -> str:
     if text is None:
         return ""
-    # HTMLエスケープしてから改行を<br>に
     s = html.escape(str(text))
     s = s.replace("\n", "<br>")
-    # 見た目用：先頭の "- " を "• " に（箇条書きっぽく）
     s = s.replace("<br>- ", "<br>• ")
     if s.startswith("- "):
         s = "• " + s[2:]
@@ -141,7 +139,7 @@ st.markdown("""
     .box-numbers { border: 3px solid #e67e22; }
     .box-buy { border: 3px solid #c0392b; background: #fff8f8; }
 
-    /* ラベル（機能2の流儀） */
+    /* ラベル */
     .label {
         font-size: 1.05rem;
         font-weight: 800;
@@ -459,8 +457,7 @@ def main():
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
     # =========================
-    # タブ1: 総合予想
-    # 要望：機能2の流儀に寄せる（押すまで空 / 押したら進捗 / 段階ごとに箱に表示）
+    # タブ1: 総合予想（再実行時に前回結果を全消し）
     # =========================
     with tab1:
         st.markdown("""<div class="feature-card">
@@ -474,17 +471,14 @@ def main():
 
         comp = st.session_state["comp_results"]
 
-        # ラベル + placeholder（初期は空）
         st.markdown('<div class="label label-step1">STEP1: データ傾向分析</div>', unsafe_allow_html=True)
         ph1 = st.empty()
-
         st.markdown('<div class="label label-step2">STEP2: 馬の選定</div>', unsafe_allow_html=True)
         ph2 = st.empty()
-
         st.markdown('<div class="label label-step3">STEP3: 買い目提案</div>', unsafe_allow_html=True)
         ph3 = st.empty()
 
-        # 既存結果を表示（タブ切替でも残る）
+        # 既存結果（再実行していないときは保持表示）
         if comp["step1"]:
             ph1.markdown(render_box("📊 データ傾向", comp["step1"], "result-box"), unsafe_allow_html=True)
         if comp["step2"]:
@@ -496,6 +490,14 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
+                # 再実行：前回出力を全消し（UIも session_state も）
+                comp["step1"] = None
+                comp["step2"] = None
+                comp["step3"] = None
+                ph1.empty()
+                ph2.empty()
+                ph3.empty()
+
                 ph1.info("📊 分析中...")
                 comp["step1"] = analyze_data_summary(client, data)
                 ph1.markdown(render_box("📊 データ傾向", comp["step1"], "result-box"), unsafe_allow_html=True)
@@ -509,8 +511,7 @@ def main():
                 ph3.markdown(render_box("💰 買い目", comp["step3"], "result-box"), unsafe_allow_html=True)
 
     # =========================
-    # タブ2: 単体評価
-    # 要望：白文字問題を完全修正（render_boxでHTML化）、挙動は元に寄せる
+    # タブ2: 単体評価（馬ごとに結果を保持）
     # =========================
     with tab2:
         st.markdown("""<div class="feature-card">
@@ -548,7 +549,7 @@ def main():
 
         saved = st.session_state["eval_results"].get(horse_num)
 
-        # 保存済みがあれば表示（押すまで空、は維持。ただし保存がある場合だけ表示）
+        # 保存済みがあれば表示（押していない時だけ）
         if saved and not eval_btn:
             ph_h.markdown(render_box("🐴 馬分析", saved["h"], "analysis-box box-horse"), unsafe_allow_html=True)
             ph_j.markdown(render_box("🏇 騎手分析", saved["j"], "analysis-box box-jockey"), unsafe_allow_html=True)
@@ -559,11 +560,13 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
-                ph_h.info("分析中...")
+                # 機能2は押したら前回表示（その馬のUI）を一旦消す
+                ph_h.empty()
                 ph_j.empty()
                 ph_c.empty()
                 ph_t.empty()
 
+                ph_h.info("分析中...")
                 h_res = analyze_horse(client, horse_info, data)
                 ph_h.markdown(render_box("🐴 馬分析", h_res, "analysis-box box-horse"), unsafe_allow_html=True)
 
@@ -582,8 +585,7 @@ def main():
                 st.session_state["eval_results"][horse_num] = {"h": h_res, "j": j_res, "c": c_res, "t": t_res}
 
     # =========================
-    # タブ3: サイン理論
-    # 要望：白文字問題を完全修正（render_boxでHTML化）、途中から白も潰す
+    # タブ3: サイン理論（再実行時に前回結果を全消し）
     # =========================
     with tab3:
         st.markdown("""<div class="feature-card">
@@ -609,7 +611,7 @@ def main():
 
         sign = st.session_state["sign_results"]
 
-        # 既存結果
+        # 既存結果（再実行していないときは保持表示）
         if sign["events"]:
             ph_e.markdown(render_box("📅 2025年の出来事", sign["events"], "analysis-box box-events"), unsafe_allow_html=True)
         if sign["numbers"]:
@@ -621,6 +623,14 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
+                # 再実行：前回出力を全消し（UIも session_state も）
+                sign["events"] = None
+                sign["numbers"] = None
+                sign["bet"] = None
+                ph_e.empty()
+                ph_n.empty()
+                ph_b.empty()
+
                 ph_e.info("収集中...")
                 e_res = get_events_2025(client)
                 sign["events"] = e_res
