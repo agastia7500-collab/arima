@@ -20,14 +20,15 @@ st.set_page_config(
 
 # ============================================
 # セッション状態（タブ切替でも結果を保持）
+# ※ widget key と衝突しない名前にする
 # ============================================
-if "comp" not in st.session_state:
-    st.session_state.comp = {"step1": None, "step2": None, "step3": None}
-if "eval" not in st.session_state:
+if "comp_results" not in st.session_state:
+    st.session_state["comp_results"] = {"step1": None, "step2": None, "step3": None}
+if "eval_results" not in st.session_state:
     # horse_num -> {"h":..., "j":..., "c":..., "t":...}
-    st.session_state.eval = {}
-if "sign" not in st.session_state:
-    st.session_state.sign = {"events": None, "numbers": None, "bet": None}
+    st.session_state["eval_results"] = {}
+if "sign_results" not in st.session_state:
+    st.session_state["sign_results"] = {"events": None, "numbers": None, "bet": None}
 
 # ============================================
 # カスタムCSS（白背景の箱は必ず黒文字）
@@ -95,9 +96,9 @@ st.markdown("""
         margin: 0.5rem 0;
         border-left: 5px solid #ffd700;
         box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        color: #333333 !important;
+        color: #111111 !important;
     }
-    .result-box * { color: #333333 !important; }
+    .result-box * { color: #111111 !important; }
 
     /* 分析ボックス（白背景→黒文字：テキストノードも黒） */
     .analysis-box {
@@ -106,9 +107,9 @@ st.markdown("""
         padding: 1rem;
         min-height: 280px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        color: #333333 !important;
+        color: #111111 !important;
     }
-    .analysis-box * { color: #333333 !important; }
+    .analysis-box * { color: #111111 !important; }
 
     .box-horse { border: 3px solid #e74c3c; }
     .box-jockey { border: 3px solid #3498db; }
@@ -172,6 +173,11 @@ st.markdown("""
 
     /* Selectbox の文字を黒（白背景想定） */
     div[data-baseweb="select"] * { color: #000000 !important; }
+
+    /* Streamlitのinfo/success/warning内の文字色（濃い青で見えにくい対策） */
+    div[data-testid="stAlert"] * {
+        color: #ffffff !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -266,16 +272,13 @@ def analyze_data_summary(client, data):
 - 血統: 好走血統TOP3
 - 前走: 好走しやすい前走レース
 - 馬体重: 好走しやすい増減幅"""
-    try:
-        r = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"データ分析:\n{format_data_for_prompt(data)}"}],
-            temperature=0.5, max_tokens=1000
-        )
-        return r.choices[0].message.content
-    except Exception as e:
-        return f"エラー: {str(e)}"
+    r = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": system_prompt},
+                  {"role": "user", "content": f"データ分析:\n{format_data_for_prompt(data)}"}],
+        temperature=0.5, max_tokens=1000
+    )
+    return r.choices[0].message.content
 
 def predict_horses(client, data, analysis):
     system_prompt = f"""あなたは競馬予想の専門家です。データ分析結果を踏まえ、2025年有馬記念の推奨馬を選定してください。
@@ -286,16 +289,13 @@ def predict_horses(client, data, analysis):
 ▲単穴: 馬名 - 選定理由
 ☆穴馬: 馬名 - 選定理由
 ✕危険馬: 馬名 - 過信禁物な理由"""
-    try:
-        r = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"【分析結果】\n{analysis}"}],
-            temperature=0.7, max_tokens=1500
-        )
-        return r.choices[0].message.content
-    except Exception as e:
-        return f"エラー: {str(e)}"
+    r = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": system_prompt},
+                  {"role": "user", "content": f"【分析結果】\n{analysis}"}],
+        temperature=0.7, max_tokens=1500
+    )
+    return r.choices[0].message.content
 
 def suggest_betting(client, prediction):
     system_prompt = """馬券アドバイザーとして買い目を提案してください。
@@ -304,16 +304,13 @@ def suggest_betting(client, prediction):
 ■ 勝負（中配当）三連複・三連単
 ■ 穴狙い ワイド・三連複
 ■ 投資配分"""
-    try:
-        r = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt},
-                      {"role": "user", "content": f"予想:\n{prediction}"}],
-            temperature=0.6, max_tokens=1000
-        )
-        return r.choices[0].message.content
-    except Exception as e:
-        return f"エラー: {str(e)}"
+    r = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": system_prompt},
+                  {"role": "user", "content": f"予想:\n{prediction}"}],
+        temperature=0.6, max_tokens=1000
+    )
+    return r.choices[0].message.content
 
 # ============================================
 # 機能②: 単体評価
@@ -439,7 +436,7 @@ def main():
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
     # =========================
-    # タブ1: 総合予想（挙動を元に戻す：STEPごとに即表示）
+    # タブ1: 総合予想（STEPごとに即表示＋保持）
     # =========================
     with tab1:
         st.markdown("""<div class="feature-card">
@@ -449,28 +446,20 @@ def main():
 
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            start_btn = st.button("🚀 予想スタート", key="comp", use_container_width=True)
+            start_btn = st.button("🚀 予想スタート", key="comp_btn", use_container_width=True)
 
-        # 既存結果は常に表示（タブ切替でも残る）
         step1_ph = st.empty()
         step2_ph = st.empty()
         step3_ph = st.empty()
 
-        if st.session_state.comp["step1"]:
-            step1_ph.markdown(
-                f'<div class="result-box"><h4>📊 データ傾向</h4>{st.session_state.comp["step1"]}</div>',
-                unsafe_allow_html=True
-            )
-        if st.session_state.comp["step2"]:
-            step2_ph.markdown(
-                f'<div class="result-box"><h4>🏇 推奨馬</h4>{st.session_state.comp["step2"]}</div>',
-                unsafe_allow_html=True
-            )
-        if st.session_state.comp["step3"]:
-            step3_ph.markdown(
-                f'<div class="result-box"><h4>💰 買い目</h4>{st.session_state.comp["step3"]}</div>',
-                unsafe_allow_html=True
-            )
+        comp = st.session_state["comp_results"]
+
+        if comp["step1"]:
+            step1_ph.markdown(f'<div class="result-box"><h4>📊 データ傾向</h4>{comp["step1"]}</div>', unsafe_allow_html=True)
+        if comp["step2"]:
+            step2_ph.markdown(f'<div class="result-box"><h4>🏇 推奨馬</h4>{comp["step2"]}</div>', unsafe_allow_html=True)
+        if comp["step3"]:
+            step3_ph.markdown(f'<div class="result-box"><h4>💰 買い目</h4>{comp["step3"]}</div>', unsafe_allow_html=True)
 
         if start_btn:
             if client is None:
@@ -478,31 +467,21 @@ def main():
             else:
                 st.markdown("### STEP1: データ傾向分析")
                 with st.spinner("📊 分析中..."):
-                    st.session_state.comp["step1"] = analyze_data_summary(client, data)
-                step1_ph.markdown(
-                    f'<div class="result-box"><h4>📊 データ傾向</h4>{st.session_state.comp["step1"]}</div>',
-                    unsafe_allow_html=True
-                )
+                    comp["step1"] = analyze_data_summary(client, data)
+                step1_ph.markdown(f'<div class="result-box"><h4>📊 データ傾向</h4>{comp["step1"]}</div>', unsafe_allow_html=True)
 
                 st.markdown("### STEP2: 馬の選定")
                 with st.spinner("🐴 評価中..."):
-                    st.session_state.comp["step2"] = predict_horses(client, data, st.session_state.comp["step1"])
-                step2_ph.markdown(
-                    f'<div class="result-box"><h4>🏇 推奨馬</h4>{st.session_state.comp["step2"]}</div>',
-                    unsafe_allow_html=True
-                )
+                    comp["step2"] = predict_horses(client, data, comp["step1"])
+                step2_ph.markdown(f'<div class="result-box"><h4>🏇 推奨馬</h4>{comp["step2"]}</div>', unsafe_allow_html=True)
 
                 st.markdown("### STEP3: 買い目提案")
                 with st.spinner("💰 検討中..."):
-                    st.session_state.comp["step3"] = suggest_betting(client, st.session_state.comp["step2"])
-                step3_ph.markdown(
-                    f'<div class="result-box"><h4>💰 買い目</h4>{st.session_state.comp["step3"]}</div>',
-                    unsafe_allow_html=True
-                )
+                    comp["step3"] = suggest_betting(client, comp["step2"])
+                step3_ph.markdown(f'<div class="result-box"><h4>💰 買い目</h4>{comp["step3"]}</div>', unsafe_allow_html=True)
 
     # =========================
-    # タブ2: 単体評価（挙動を元に戻す：初期は何も出さない／押したら「分析中…」）
-    # ＋ 結果は保持して、馬を選び直しても残る
+    # タブ2: 単体評価（初期は空／押したらinfo進捗＋保持）
     # =========================
     with tab2:
         st.markdown("""<div class="feature-card">
@@ -518,7 +497,7 @@ def main():
                 format_func=lambda x: f"{HORSE_LIST_2025[x]['馬名']} ({HORSE_LIST_2025[x]['騎手']})",
                 key="horse_select"
             )
-            eval_btn = st.button("🔍 評価スタート", key="eval", use_container_width=True)
+            eval_btn = st.button("🔍 評価スタート", key="eval_btn", use_container_width=True)
 
         horse_info = HORSE_LIST_2025[horse_num]
         st.markdown(f"## {horse_info['馬名']} の分析")
@@ -538,9 +517,9 @@ def main():
         st.markdown('<div class="label label-total">📊 総合評価</div>', unsafe_allow_html=True)
         ph_t = st.empty()
 
-        saved = st.session_state.eval.get(horse_num)
+        saved = st.session_state["eval_results"].get(horse_num)
 
-        # 保存済みがあれば表示（初期に「待機中」は出さない）
+        # 保存済みがあれば表示（押すまで何も出さない、という元挙動）
         if saved and not eval_btn:
             ph_h.markdown(f'<div class="analysis-box box-horse">{saved["h"]}</div>', unsafe_allow_html=True)
             ph_j.markdown(f'<div class="analysis-box box-jockey">{saved["j"]}</div>', unsafe_allow_html=True)
@@ -551,7 +530,6 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
-                # 以前の挙動に合わせて、押したタイミングで状態表示
                 ph_h.info("分析中...")
                 ph_j.info("待機中...")
                 ph_c.info("待機中...")
@@ -572,10 +550,10 @@ def main():
                 t_res = analyze_total(client, horse_info, h_res, j_res, c_res)
                 ph_t.markdown(f'<div class="analysis-box box-total">{t_res}</div>', unsafe_allow_html=True)
 
-                st.session_state.eval[horse_num] = {"h": h_res, "j": j_res, "c": c_res, "t": t_res}
+                st.session_state["eval_results"][horse_num] = {"h": h_res, "j": j_res, "c": c_res, "t": t_res}
 
     # =========================
-    # タブ3: サイン理論（結果保持は維持・表示挙動は極力そのまま）
+    # タブ3: サイン理論（保持）
     # =========================
     with tab3:
         st.markdown("""<div class="feature-card">
@@ -585,9 +563,8 @@ def main():
 
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            sign_btn = st.button("🔮 サイン分析", key="sign", use_container_width=True)
+            sign_btn = st.button("🔮 サイン分析", key="sign_btn", use_container_width=True)
 
-        # 表示枠
         col_e, col_n = st.columns(2)
         with col_e:
             st.markdown('<div class="label label-events">📅 2025年の出来事</div>', unsafe_allow_html=True)
@@ -600,13 +577,14 @@ def main():
         st.markdown('<div class="label label-buy">💰 サイン理論買い目</div>', unsafe_allow_html=True)
         ph_b = st.empty()
 
-        # 既存結果表示
-        if st.session_state.sign["events"]:
-            ph_e.markdown(f'<div class="analysis-box box-events">{st.session_state.sign["events"]}</div>', unsafe_allow_html=True)
-        if st.session_state.sign["numbers"]:
-            ph_n.markdown(f'<div class="analysis-box box-numbers">{st.session_state.sign["numbers"]}</div>', unsafe_allow_html=True)
-        if st.session_state.sign["bet"]:
-            ph_b.markdown(f'<div class="analysis-box box-buy">{st.session_state.sign["bet"]}</div>', unsafe_allow_html=True)
+        sign = st.session_state["sign_results"]
+
+        if sign["events"]:
+            ph_e.markdown(f'<div class="analysis-box box-events">{sign["events"]}</div>', unsafe_allow_html=True)
+        if sign["numbers"]:
+            ph_n.markdown(f'<div class="analysis-box box-numbers">{sign["numbers"]}</div>', unsafe_allow_html=True)
+        if sign["bet"]:
+            ph_b.markdown(f'<div class="analysis-box box-buy">{sign["bet"]}</div>', unsafe_allow_html=True)
 
         if sign_btn:
             if client is None:
@@ -614,20 +592,19 @@ def main():
             else:
                 ph_e.info("収集中...")
                 e_res = get_events_2025(client)
-                st.session_state.sign["events"] = e_res
+                sign["events"] = e_res
                 ph_e.markdown(f'<div class="analysis-box box-events">{e_res}</div>', unsafe_allow_html=True)
 
                 ph_n.info("抽出中...")
                 n_res = extract_numbers(client, e_res)
-                st.session_state.sign["numbers"] = n_res
+                sign["numbers"] = n_res
                 ph_n.markdown(f'<div class="analysis-box box-numbers">{n_res}</div>', unsafe_allow_html=True)
 
                 ph_b.info("導出中...")
                 b_res = sign_betting(client, e_res, n_res)
-                st.session_state.sign["bet"] = b_res
+                sign["bet"] = b_res
                 ph_b.markdown(f'<div class="analysis-box box-buy">{b_res}</div>', unsafe_allow_html=True)
 
-    # フッター
     st.markdown("---")
     st.markdown("""<div style="text-align:center;color:#999;padding:1rem;">
         ⚠️ 予想は参考情報です。馬券購入は自己責任で。<br>
