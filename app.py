@@ -531,13 +531,13 @@ def sign_betting(client, events, numbers):
 {HORSE_INFO_STR_2025}
 【出力】
 ■ 最重要サイン 
-{馬名と根拠を端的に記載}
+馬名と根拠を端的に記載
 ■ 準重要サイン
-{馬名と根拠を記載}
+馬名と根拠を記載
 ■ 大穴予想
-{馬名と根拠を記載}
+馬名と根拠を記載
 ■ 買い目(馬連/三連複/ワイド) 
-{買い目を記載}
+買い目を記載
 """
     r = client.chat.completions.create(
         model="gpt-4o",
