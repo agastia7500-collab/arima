@@ -500,7 +500,8 @@ def get_events_2025(client):
     return EVENTS_2025_STR
 
 def extract_numbers(client, events):
-    system_prompt = "出来事から馬番に使える数字を抽出。【出力】出来事：数字（意味）"
+    system_prompt = f"""出来事から買い目の検討に使える情報/数値を考察してください。ここではどういった情報/数値は使えそうかを判断するところまででOKです。
+あくまで買い目を考えるのに必要な情報の提供までで、買い目自体は出さないでください。{HORSE_INFO_STR_2025}"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
@@ -517,7 +518,7 @@ def sign_betting(client, events, numbers):
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content": f"出来事:\n{events}\n数字:\n{numbers}"}],
+                  {"role": "user", "content": f"出来事:\n{events}\n考察:\n{numbers}"}],
         temperature=0.9, max_tokens=1000
     )
     return r.choices[0].message.content
