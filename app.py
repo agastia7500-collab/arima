@@ -449,7 +449,7 @@ def get_events_2025(client):
     return EVENTS_2025_STR
 
 def extract_numbers(client, events):
-    system_prompt = "出来事から馬番に使える数字を抽出。【出力】表形式で 出来事|数字|意味 ※16以下優先"
+    system_prompt = "出来事から馬番に使える数字を抽出。【出力】出来事：数字（意味）"
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
