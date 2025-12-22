@@ -722,7 +722,7 @@ def main():
             st.markdown('<div class="label label-events">📅 2025年の出来事</div>', unsafe_allow_html=True)
             ph_e = st.empty()
         with col_n:
-            st.markdown('<div class="label label-numbers">🔢 抽出数字</div>', unsafe_allow_html=True)
+            st.markdown('<div class="label label-numbers">🔢 サイン抽出</div>', unsafe_allow_html=True)
             ph_n = st.empty()
 
         st.markdown("---")
@@ -735,7 +735,7 @@ def main():
         if sign["events"]:
             ph_e.markdown(render_box("📅 2025年の出来事", sign["events"], "analysis-box box-events"), unsafe_allow_html=True)
         if sign["numbers"]:
-            ph_n.markdown(render_box("🔢 抽出数字", sign["numbers"], "analysis-box box-numbers"), unsafe_allow_html=True)
+            ph_n.markdown(render_box("🔢 サイン抽出", sign["numbers"], "analysis-box box-numbers"), unsafe_allow_html=True)
         if sign["bet"]:
             ph_b.markdown(render_box("💰 サイン理論買い目", sign["bet"], "analysis-box box-buy"), unsafe_allow_html=True)
 
@@ -759,7 +759,7 @@ def main():
                 ph_n.info("抽出中...")
                 n_res = extract_numbers(client, e_res)
                 sign["numbers"] = n_res
-                ph_n.markdown(render_box("🔢 抽出数字", n_res, "analysis-box box-numbers"), unsafe_allow_html=True)
+                ph_n.markdown(render_box("🔢 サイン抽出", n_res, "analysis-box box-numbers"), unsafe_allow_html=True)
 
                 ph_b.info("導出中...")
                 b_res = sign_betting(client, e_res, n_res)
