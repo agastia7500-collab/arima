@@ -459,7 +459,7 @@ def extract_numbers(client, events):
     return r.choices[0].message.content
 
 def sign_betting(client, events, numbers):
-    system_prompt = f"""サイン理論から2025年有馬記念の買い目を導出してください。
+    system_prompt = f"""サイン理論から2025年有馬記念の買い目を導出してください。人気や実績は考慮に入れずに、2025年の出来事に関連する数字からのみ買い目を考えてください。
 {HORSE_INFO_STR_2025}
 【出力】■ 最重要サイン→馬名 ■ 準重要サイン→馬名 ■ 買い目(馬連/三連複/ワイド) ■ 大穴予想
 ⚠️サイン理論はエンターテイメントです！"""
