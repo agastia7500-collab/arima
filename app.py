@@ -520,21 +520,30 @@ def extract_numbers(client, events):
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content": f"出来事:\n{events}"}],
-        temperature=0.7, max_tokens=1000
+        temperature=0.7, max_tokens=3000
     )
     return r.choices[0].message.content
 
 def sign_betting(client, events, numbers):
     system_prompt = f"""サイン理論から2025年有馬記念の買い目を導出してください。人気や実績は考慮に入れずに、2025年の出来事に関連する情報や数字を用いて買い目を考えてください。
 オカルト/こじつけでいいので、馬の人気/実績やジョッキーの人気/実績とは関係なく、世相やニュースと、レース結果の因果関係を読み解いたうえで、買い目を決めてください。
+「大きな節目を迎えている」といった抽象的な判断ではなく、「8年ぶり」だから「8」といった明確なつながりが見える形で買い目を考えてください。因果関係が明確にわかるようにロジックを明記するということですね。
 {HORSE_INFO_STR_2025}
-【出力】■ 最重要サイン→馬名 ■ 準重要サイン→馬名 ■ 買い目(馬連/三連複/ワイド) ■ 大穴予想
-⚠️サイン理論はエンターテイメントです！"""
+【出力】
+■ 最重要サイン 
+{馬名と根拠を端的に記載}
+■ 準重要サイン
+{馬名と根拠を記載}
+■ 大穴予想
+{馬名と根拠を記載}
+■ 買い目(馬連/三連複/ワイド) 
+{買い目を記載}
+"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content": f"出来事:\n{events}\n考察:\n{numbers}"}],
-        temperature=0.9, max_tokens=1000
+        temperature=0.5, max_tokens=3000
     )
     return r.choices[0].message.content
 
