@@ -470,7 +470,7 @@ def extract_numbers(client, events):
     ## 原則
     ・ユーザーの入力形式は自由とする 
     ・結論 → 理由 → 補足 の順で説明する 
-    ・補足では結論や理由に対する信ぴょう性を増すような小話を語ってください。
+    ・補足では結論や理由に対する信ぴょう性を増すような具体的かつ意味深な小話を語ってください。（陰謀論的なこじつけの小話で良いです。さも、常識かのように語ってください。
     ・専門用語は使ってよいが、必ず一言補足を添える
     ・陰謀論的な考え方が面白いかもしれません。
     ・一定の納得感を醸成するような巧みな語り口でお願いします。
@@ -508,7 +508,7 @@ def extract_numbers(client, events):
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content": f"出来事:\n{events}"}],
-        temperature=0.7, max_tokens=3000
+        temperature=0.5, max_tokens=3000
     )
     return r.choices[0].message.content
 
