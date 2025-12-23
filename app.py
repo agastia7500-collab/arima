@@ -435,7 +435,6 @@ def analyze_course(client, horse_info, data):
                   f"前走:{horse_info['前走']}\n"
                   f"{format_data_for_prompt(data)}"}
         ],
-                  {"role": "user", "content": f"馬名:{horse_info['馬名']} 前走:{horse_info['前走']}\n{format_data_for_prompt(data)}"}],
         temperature=0.6, max_tokens=800
     )
     return r.choices[0].message.content
