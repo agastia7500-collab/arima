@@ -580,7 +580,10 @@ def sign_betting(client, events, numbers):
     ・人気順のみでの評価（サイン馬券は人気薄が本命になることも多い） 
     ・内部評価軸（サイン解釈の基準）を会話によって変更すること 
     ・ユーザーの意見に迎合すること 
-    ・一般的な競馬のデータ分析や馬の能力評価に偏りすぎること。あくまで「サイン」を主軸とする。"""
+    ・一般的な競馬のデータ分析や馬の能力評価に偏りすぎること。あくまで「サイン」を主軸とする。
+    
+    ## 出走馬情報
+   {HORSE_INFO_STR_2025}"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
