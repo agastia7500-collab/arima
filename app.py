@@ -489,11 +489,14 @@ def suggest_betting(client, prediction):
 ### 使用してよい情報源
 - 推奨馬印
 
-## 出力形式（初回・まとめ時）
-【結論（買い方の例を具体的に出力）】
+## 出力形式
+【結論】
 ・馬連：最大3点
 ・三連複：最大6点
-・資金配分：安全型 / 攻め型"""
+・資金配分：安全型 / 
+
+## 出走馬情報
+{HORSE_INFO_STR_2025}"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
