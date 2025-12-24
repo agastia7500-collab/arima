@@ -388,7 +388,7 @@ EVENTS_2025_STR = """【2025年の主な出来事】
 """
 
 search_query = """
-あなたは有馬記念（中山芝2500m）の予想に資する情報を調査する専門家です。
+あなたは第70回有馬記念2025の予想に資する情報を調査する専門家です。
 以下の調査対象について、WEB検索を行い、事実ベースで整理してください。
 
 【調査対象】
@@ -436,7 +436,7 @@ def gpt_web_search(client: OpenAI, prompt: str) -> str:
         tool_choice="auto",
         include=["web_search_call.action.sources"],
         input=prompt,
-        max_output_tokens=10000,
+        max_output_tokens=5000,
     )
 
     text = (r.output_text or "").strip()
