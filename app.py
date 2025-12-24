@@ -214,7 +214,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-/* selectbox のラベル文字を白くする */
 label[data-testid="stWidgetLabel"] {
     color: #ffffff !important;
     font-weight: 700;
