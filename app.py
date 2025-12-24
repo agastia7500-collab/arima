@@ -1117,7 +1117,7 @@ def main():
                 list(HORSE_LIST_2025.keys()),
                 format_func=lambda x: (
                     f"[{HORSE_LIST_2025[x]['枠番']}]"
-                    f"{HORSE_LIST_2025[x]['馬番']}｜"
+                    f" {HORSE_LIST_2025[x]['馬番']}｜"
                     f"{HORSE_LIST_2025[x]['馬名']}（{HORSE_LIST_2025[x]['騎手']}）"
                 ),
                 key="horse_select"
