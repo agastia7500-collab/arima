@@ -290,7 +290,7 @@ def load_race_data(uploaded_file=None):
         if uploaded_file is not None:
             xlsx = pd.ExcelFile(uploaded_file)
         else:
-            xlsx = pd.ExcelFile("main/arima_data.xlsx")
+            xlsx = pd.ExcelFile("arima/arima_data.xlsx")
         data = {}
         for sheet in xlsx.sheet_names:
             data[sheet] = pd.read_excel(xlsx, sheet_name=sheet)
@@ -983,7 +983,7 @@ def main():
     data = load_race_data()
 
     if data is None:
-        st.error("❌ main/arima_data.xlsx の読み込みに失敗しました")
+        st.error("❌ arima_data.xlsx の読み込みに失敗しました")
         st.stop()
 
     # サイドバー
