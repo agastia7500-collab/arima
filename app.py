@@ -216,23 +216,59 @@ st.markdown("""
 
 st.markdown("""
 <style>
-/* サイドバーの開閉トグルを強制表示＆最前面に */
-[data-testid="collapsedControl"] {
+/* 1) ヘッダー/ツールバーが背面に回っているとトグルも消えるので最前面化 */
+[data-testid="stHeader"],
+header,
+.stApp > header {
+  z-index: 999998 !important;
+  position: relative !important;
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  position: fixed !important;
-  top: 0.75rem !important;
-  left: 0.75rem !important;
+}
+
+/* 2) サイドバー開閉トグル（旧/新の両方を想定して全部拾う） */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+button[aria-label="Close sidebar"],
+button[aria-label="Open sidebar"]{
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
   z-index: 999999 !important;
 }
 
-/* トグルの中身が暗背景で見えるように */
-[data-testid="collapsedControl"] * {
+/* 3) トグルが背景に埋もれる問題が多いので固定配置で強制表示 */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"]{
+  position: fixed !important;
+  top: 0.75rem !important;
+  left: 0.75rem !important;
+}
+
+/* 4) ボタンが“見えてるのに見えない”対策（色/背景/影） */
+[data-testid="collapsedControl"] *,
+[data-testid="stSidebarCollapsedControl"] *,
+[data-testid="stSidebarCollapseButton"] *,
+button[aria-label="Close sidebar"] *,
+button[aria-label="Open sidebar"] *{
   color: #ffffff !important;
+}
+
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+button[aria-label="Close sidebar"],
+button[aria-label="Open sidebar"]{
+  background: rgba(0,0,0,0.35) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35) !important;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # ============================================
