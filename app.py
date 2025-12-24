@@ -214,6 +214,27 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* サイドバーの開閉トグルを強制表示＆最前面に */
+[data-testid="collapsedControl"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  top: 0.75rem !important;
+  left: 0.75rem !important;
+  z-index: 999999 !important;
+}
+
+/* トグルの中身が暗背景で見えるように */
+[data-testid="collapsedControl"] * {
+  color: #ffffff !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 # ============================================
 # OpenAI クライアント
 # ============================================
