@@ -461,36 +461,32 @@ def gpt_web_search(client: OpenAI, prompt: str) -> str:
         tool_choice="auto",
         include=["web_search_call.action.sources"],
         input=prompt,
-        max_output_tokens=5000,
+        max_output_tokens=3000,
     )
 
-    # まず通常の output_text を返す
-    text = (_get(r, "output_text", "") or "").strip()
+    text = (getattr(r, "output_text", "") or "").strip()
     if text:
         return text
 
-    # フォールバック：sources を拾ってURL一覧を返す（typed object対応）
-    sources = _extract_sources_from_response(r)
+    # 文章が空でも、sources/snippet を「検索結果テキスト」として返す
+    sources = []
+    for item in getattr(r, "output", []) or []:
+        if getattr(item, "type", None) == "web_search_call":
+            action = getattr(item, "action", None)
+            sources = list(getattr(action, "sources", None) or [])
+            break
 
     if sources:
-        lines = ["（検索テキストが空だったため、取得URL一覧を返します）"]
-        for s in sources[:30]:
-            title = (_get(s, "title", "") or "").strip()
-            url = (_get(s, "url", "") or "").strip()
-            snippet = (_get(s, "snippet", "") or "").strip()
-
-            # できるだけ情報量を残す（snippet があれば付ける）
-            if title and url and snippet:
-                lines.append(f"- {title} : {url}\n  {snippet}")
-            elif title and url:
-                lines.append(f"- {title} : {url}")
-            elif url:
-                lines.append(f"- {url}")
-
+        lines = ["（検索本文が空だったため、検索結果スニペットを返します）"]
+        for s in sources[:20]:
+            title = (getattr(s, "title", "") or "").strip()
+            url = (getattr(s, "url", "") or "").strip()
+            snippet = (getattr(s, "snippet", "") or "").strip()
+            if title or snippet or url:
+                lines.append(f"- {title}\n  {url}\n  {snippet}".strip())
         return "\n".join(lines).strip()
 
-    # sources も空：検索が0件/ブロック/一時障害など。ここでは空を返す（ensure側の挙動は維持）
-    return ""
+    return "（WEB検索結果なし）"
 
 def ensure_daily_gpt_search(client: OpenAI, query: str) -> str:
     if client is None:
