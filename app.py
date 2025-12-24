@@ -24,7 +24,7 @@ st.set_page_config(
     page_title="有馬記念予想 2025",
     page_icon="🏇",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ============================================
@@ -903,8 +903,7 @@ def main():
     # サイドバー
     with st.sidebar:
         st.markdown("### ⚙️ 設定")
-        uploaded_file = st.file_uploader("📁 予想データ", type=["xlsx", "xls"])
-
+    
         st.markdown("---")
         if st.button("🔄 今日の検索をリセット", use_container_width=True):
             st.session_state["search_date_jst"] = None
