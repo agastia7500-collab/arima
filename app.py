@@ -1,13 +1,6 @@
 """
 🏇 有馬記念予想アプリ 2025
 GitHub × Streamlit で動作する競馬予想システム
-
-gpt-5-mini 仕様:
-- 生成系は Responses API (client.responses.create) に統一
-- temperature は一切渡さない
-- max_output_tokens は原則渡すが、BadRequest 等なら自動で外して再試行
-- gpt-5-mini が権限/環境要因で落ちた場合に備え、gpt-4.1 へ自動フォールバック（任意）
-- Web検索は gpt-4.1 + web_search のまま（現状動いている前提）
 """
 
 import streamlit as st
@@ -16,60 +9,10 @@ from openai import OpenAI
 import os
 import html
 import time
-from typing import Dict
+from typing import Any, Dict, List
 from datetime import datetime, timezone, timedelta
 
 JST = timezone(timedelta(hours=9))
-
-
-# ============================================
-# モデル設定
-# ============================================
-MODEL_MAIN = "gpt-5-mini"     # 生成の主モデル
-MODEL_FALLBACK = "gpt-4.1"    # 任意: None にするとフォールバックしない
-
-# Web検索は動作実績があるモデルを固定
-MODEL_WEB = "gpt-4.1"
-
-
-# ============================================
-# Responses API 呼び出し（安全版）
-# - temperature は一切渡さない
-# - max_output_tokens は原則渡す（それが原因で落ちたら外して再試行）
-# - さらにモデル要因で落ちたら MODEL_FALLBACK に退避（任意）
-# ============================================
-def _responses_text(
-    client: OpenAI,
-    system_prompt: str,
-    user_prompt: str,
-    max_output_tokens: int | None = None,
-    model: str = MODEL_MAIN,
-) -> str:
-    input_payload = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-    def _call(_model: str, _with_max_tokens: bool) -> str:
-        kwargs = dict(model=_model, input=input_payload)
-        if _with_max_tokens and max_output_tokens is not None:
-            kwargs["max_output_tokens"] = int(max_output_tokens)
-        r = client.responses.create(**kwargs)
-        return r.output_text
-
-    # 1) 指定どおり（max_output_tokens あり）
-    try:
-        return _call(model, _with_max_tokens=True)
-    except Exception:
-        # 2) max_output_tokens を外して同モデル
-        try:
-            return _call(model, _with_max_tokens=False)
-        except Exception:
-            # 3) フォールバック（max_output_tokens はまず外す）
-            if MODEL_FALLBACK:
-                return _call(MODEL_FALLBACK, _with_max_tokens=False)
-            raise
-
 
 # ============================================
 # ページ設定
@@ -78,7 +21,7 @@ st.set_page_config(
     page_title="有馬記念予想 2025",
     page_icon="🏇",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
 
 # ============================================
@@ -96,7 +39,6 @@ if "search_date_jst" not in st.session_state:
     st.session_state["search_date_jst"] = None
 if "search_error" not in st.session_state:
     st.session_state["search_error"] = None
-
 
 # ============================================
 # 表示ヘルパー（白文字問題の根本対策）
@@ -122,6 +64,7 @@ def render_box(title: str, body_text: str, box_class: str = "result-box") -> str
     </div>
     """
 
+
 def render_sidebar_search(sb_debug, sb_body):
     sb_debug.caption(f"date={st.session_state.get('search_date_jst')}")
     sb_debug.caption(f"has_results={bool(st.session_state.get('search_results'))}")
@@ -130,7 +73,7 @@ def render_sidebar_search(sb_debug, sb_body):
     if st.session_state.get("search_results"):
         sb_body.markdown(
             render_box("Web検索結果", st.session_state["search_results"], "analysis-box"),
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
     else:
         sb_body.info("まだWeb検索は実行されていません")
@@ -139,7 +82,8 @@ def render_sidebar_search(sb_debug, sb_body):
 # ============================================
 # カスタムCSS
 # ============================================
-st.markdown("""
+st.markdown(
+    """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
 
@@ -284,9 +228,12 @@ st.markdown("""
     /* info/success/warning の文字を白（暗い背景で見えるように） */
     div[data-testid="stAlert"] * { color: #ffffff !important; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 /* selectbox のラベル文字を白くする */
 label[data-testid="stWidgetLabel"] {
@@ -294,8 +241,9 @@ label[data-testid="stWidgetLabel"] {
     font-weight: 700;
 }
 </style>
-""", unsafe_allow_html=True)
-
+""",
+    unsafe_allow_html=True,
+)
 
 # ============================================
 # OpenAI クライアント
@@ -306,7 +254,6 @@ def get_openai_client():
         st.error("⚠️ OpenAI API キーが設定されていません")
         return None
     return OpenAI(api_key=api_key)
-
 
 # ============================================
 # データ読み込み
@@ -331,18 +278,24 @@ def format_data_for_prompt(data):
         return "データなし"
     formatted = ""
     sheets = ["年齢", "枠順", "騎手", "血統", "前走クラス", "前走レース別", "馬体重増減"]
-    titles = ["年齢別期待値", "枠順別期待値", "騎手別期待値（中山2500m）", "血統（種牡馬）別期待値",
-              "前走クラス別期待値", "前走レース別期待値", "馬体重増減別期待値"]
+    titles = [
+        "年齢別期待値",
+        "枠順別期待値",
+        "騎手別期待値（中山2500m）",
+        "血統（種牡馬）別期待値",
+        "前走クラス別期待値",
+        "前走レース別期待値",
+        "馬体重増減別期待値",
+    ]
     for sheet, title in zip(sheets, titles):
         if sheet in data:
             formatted += f"\n{data[sheet].to_string(index=False)}\n\n"
     return formatted
 
-
 # ============================================
 # 2025年有馬記念 出走予定馬データ（枠順未確定）
 # ============================================
-HORSE_LIST_2025: Dict[int, Dict] = {
+HORSE_LIST_2025 = {
     1: {"枠番": 0, "馬番": 0, "馬名": "レガレイラ", "性齢": "牝4歳", "騎手": "C.ルメール", "血統": "スワーヴリチャード", "前走": "エリザベス女王杯1着"},
     2: {"枠番": 0, "馬番": 0, "馬名": "ミュージアムマイル", "性齢": "牡3歳", "騎手": "C.デムーロ", "血統": "リオンディーズ", "前走": "天皇賞秋2着"},
     3: {"枠番": 0, "馬番": 0, "馬名": "ダノンデサイル", "性齢": "牡4歳", "騎手": "戸崎圭太", "血統": "エピファネイア", "前走": "JC3着"},
@@ -447,7 +400,7 @@ search_query = """
 
 【出力要件】
 - JRA/主催者、公式出走表・公式結果、信頼できる出走データベース（事実情報）を最優先
-- 推測・予想・主観は含めない
+- 推測・予想・主観は含まない
 - 予想記事の印、回顧記事の主観評価、SNSの推測は使用禁止
 - 調査対象の項目ごとに箇条書きの文章で20個以上出力する(各項目5個以上)
 - 調査結果において、予想に影響しそうな内容は可能な限り全て具体的に記述する
@@ -456,38 +409,66 @@ search_query = """
 """
 
 # ============================================
-# Web検索機能（gpt-5-mini 優先 + フォールバック）
+# GPT-5-mini 共通コール（Responses API）
+# - temperature等は使わない（GPT-5系でエラー要因になりやすい）
+# - max_output_tokens は必要に応じて指定
 # ============================================
+def _call_gpt5mini_text(client: OpenAI, system_prompt: str, user_prompt: str, max_output_tokens: int) -> str:
+    r = client.responses.create(
+        model="gpt-5-mini",
+        input=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        max_output_tokens=max_output_tokens,
+    )
+    return (r.output_text or "").strip()
 
-MODEL_WEB_PRIMARY = "gpt-5-mini"
-MODEL_WEB_FALLBACK = "gpt-4.1"   # gpt-5-mini で web_search が通らない環境用
+# ============================================
+# Web検索機能（Responses API + web_search）
+# - gpt-5-mini で web_search を実行
+# - output_text が空でも sources を拾って最低限返す（RuntimeError対策）
+# ============================================
+def gpt_web_search(client: OpenAI, prompt: str) -> str:
+    r = client.responses.create(
+        model="gpt-5-mini",
+        tools=[{"type": "web_search"}],
+        tool_choice="auto",
+        include=["web_search_call.action.sources"],
+        input=prompt,
+        max_output_tokens=10000,
+    )
 
-def gpt_web_search(client, prompt: str) -> str:
-    """
-    web_search ツール付き Responses API。
-    - まず gpt-5-mini で試す
-    - 失敗したら gpt-4.1 にフォールバック
-    """
-    def _call(model_name: str) -> str:
-        r = client.responses.create(
-            model=model_name,
-            tools=[{"type": "web_search"}],
-            input=prompt,
-            max_output_tokens=3000,
-        )
-        return r.output_text
+    text = (r.output_text or "").strip()
+    if text:
+        return text
 
+    # フォールバック：モデルが message を返さず output_text が空でも、sources を拾って返す
+    sources: List[Dict[str, Any]] = []
     try:
-        return _call(MODEL_WEB_PRIMARY)
-    except Exception as e1:
-        # gpt-5-mini が web_search 未対応/権限なし/一時エラー等の場合
-        try:
-            return _call(MODEL_WEB_FALLBACK)
-        except Exception as e2:
-            # どちらもダメならエラーを上に投げる（ensure_daily_gpt_search 側で捕捉される）
-            raise RuntimeError(f"web_search failed: primary={repr(e1)} fallback={repr(e2)}")
+        for item in getattr(r, "output", []) or []:
+            if isinstance(item, dict) and item.get("type") == "web_search_call":
+                action = item.get("action") or {}
+                sources = action.get("sources") or []
+                break
+    except Exception:
+        sources = []
 
-def ensure_daily_gpt_search(client, query: str) -> str:
+    if sources:
+        lines = ["（検索テキストが空だったため、取得URL一覧を返します）"]
+        for s in sources[:30]:
+            title = (s.get("title") or "").strip()
+            url = (s.get("url") or "").strip()
+            if title and url:
+                lines.append(f"- {title} : {url}")
+            elif url:
+                lines.append(f"- {url}")
+        return "\n".join(lines)
+
+    return ""  # ensure側で空判定される
+
+
+def ensure_daily_gpt_search(client: OpenAI, query: str) -> str:
     if client is None:
         st.session_state["search_error"] = "client is None"
         return None
@@ -499,7 +480,7 @@ def ensure_daily_gpt_search(client, query: str) -> str:
         return st.session_state["search_results"]
 
     try:
-        text = gpt_web_search(client, query)
+        text = gpt_web_search(client, query)  # str想定
         if not text or not str(text).strip():
             raise RuntimeError("web_search returned empty text")
         st.session_state["search_results"] = str(text)
@@ -511,7 +492,6 @@ def ensure_daily_gpt_search(client, query: str) -> str:
         st.session_state["search_results"] = None
         st.session_state["search_date_jst"] = None
         return None
-
 
 # ============================================
 # 機能①: 総合予想（3段階）
@@ -549,12 +529,12 @@ def analyze_data_summary(client, data):
 ※ペース判定の根拠を1行で示す。
 
 ### STEP2 過去データ傾向
-以下を個別評価し傾向を出力する
-　・年齢
-　・枠順
-　・前走レース
-　・血統
-　・騎手
+以下を個別評価し傾向を出力する  
+　・年齢  
+　・枠順  
+　・前走レース  
+　・血統  
+　・騎手  
 　・馬体重
 　・コース形態（小回り・コーナー数・坂）
 ・求められる能力（スタミナ・器用さ・持続力）
@@ -565,7 +545,7 @@ def analyze_data_summary(client, data):
 (内容を簡潔に記載)
 【年齢】
 (○○歳の馬が好走しやすい傾向といった内容を簡潔に記載)
-【枠順】
+【枠順】  
 (～～という傾向といった形式で内容を簡潔に記載)
 【前走レース】
 (～～という傾向といった形式で内容を簡潔に記載)
@@ -588,8 +568,12 @@ def analyze_data_summary(client, data):
 ## WEB検索結果
 {search_results}
 """
-    user_prompt = f"データ分析:\n{format_data_for_prompt(data)}"
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=1000, model=MODEL_MAIN)
+    return _call_gpt5mini_text(
+        client=client,
+        system_prompt=system_prompt,
+        user_prompt=f"データ分析:\n{format_data_for_prompt(data)}",
+        max_output_tokens=1000,
+    )
 
 
 def predict_horses(client, data, analysis):
@@ -612,29 +596,29 @@ def predict_horses(client, data, analysis):
 ### STEP1 出走馬評価
 全出走馬を以下6指標で **0〜5点** で採点し、合計点を算出する。
 
-A. コース適性
+A. コース適性  
 　中山実績・小回り・坂への対応力
 
-B. 距離適性
+B. 距離適性  
 　2200〜2600mでの内容（着順よりレース内容重視）
 
-C. 展開適性
+C. 展開適性  
 　想定ペース × 脚質の相性
 
-D. 近走内容
+D. 近走内容  
 　位置取り・上がり・持続力・不利の有無を評価
 
-E. 過去データ適合（統合評価）
-　以下を内部で個別評価し、統合して点数化する
-　・年齢
-　・枠順
-　・前走レース
-　・血統
-　・騎手
+E. 過去データ適合（統合評価）  
+　以下を内部で個別評価し、統合して点数化する  
+　・年齢  
+　・枠順  
+　・前走レース  
+　・血統  
+　・騎手  
 ※出力時は「どの要素が一致したか」を必ず明示する
 
-F. 当日要素
-　馬体重増減・パドック・馬場状態
+F. 当日要素  
+　馬体重増減・パドック・馬場状態  
 ※不明な項目は0点扱い
 
 ### STEP2  リスク評価
@@ -661,8 +645,12 @@ F. 当日要素
 ## WEB検索結果
 {search_results}
 """
-    user_prompt = f"【分析結果】\n{analysis}"
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=1500, model=MODEL_MAIN)
+    return _call_gpt5mini_text(
+        client=client,
+        system_prompt=system_prompt,
+        user_prompt=f"【分析結果】\n{analysis}",
+        max_output_tokens=10000,
+    )
 
 
 def suggest_betting(client, prediction):
@@ -693,9 +681,12 @@ def suggest_betting(client, prediction):
 ## WEB検索結果
 {search_results}
 """
-    user_prompt = f"予想:\n{prediction}"
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=1000, model=MODEL_MAIN)
-
+    return _call_gpt5mini_text(
+        client=client,
+        system_prompt=system_prompt,
+        user_prompt=f"予想:\n{prediction}",
+        max_output_tokens=1000,
+    )
 
 # ============================================
 # 機能②: 単体評価（4段階）
@@ -709,12 +700,12 @@ def analyze_horse(client, horse_info, data):
 出力に「*」や「#」を含まないでください。
 
 ## 評価項目
-・ 血統評価
+・ 血統評価  
 　- 種牡馬の有馬記念着順割合を参照
 　- 好走傾向の強弱を評価
 　- 有馬記念向き血統かどうかを判断
 
-・ 年齢評価
+・ 年齢評価  
 　- 年齢別の有馬記念着順割合を参照
 　- 好走ゾーン・不振ゾーンとの一致度を評価
 
@@ -730,7 +721,7 @@ def analyze_horse(client, horse_info, data):
 ★★★★☆：高負荷下でも一定水準を維持できる
 ★★★☆☆：能力はあるが、消耗や展開でブレが出る
 ★★☆☆☆：地力は高いが、有馬条件では割引が必要
-★☆☆☆☆：能力評価以前に条件的に厳しい
+★☆☆☆☆：能力評価以前に条件的に厳しい 
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
@@ -748,7 +739,7 @@ def analyze_horse(client, horse_info, data):
         f"性齢:{horse_info['性齢']} 血統:{horse_info['血統']} 前走:{horse_info['前走']}\n"
         f"{format_data_for_prompt(data)}"
     )
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=800, model=MODEL_MAIN)
+    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=800)
 
 
 def analyze_jockey(client, horse_info, data):
@@ -762,20 +753,20 @@ def analyze_jockey(client, horse_info, data):
 　統合される前提のため、評価基準・結論をブレさせないこと。
 
 ## 評価項目
-騎手別の有馬記念着順割合を参照し、以下3区分で内部判定する
-・好走傾向
-・平均的
-・不振傾向
+騎手別の有馬記念着順割合を参照し、以下3区分で内部判定する 
+・好走傾向  
+・平均的  
+・不振傾向  
 
 ## WEB検索結果
 {search_results}
 
 ## ★評価の内部目安（非出力）
-★★★★★：好走傾向が非常に強く、凡走が少ない
-★★★★☆：好走傾向があり、安定感のある水準
-★★★☆☆：平均的水準
-★★☆☆☆：好走例はあるが、安定感に欠ける
-★☆☆☆☆：明確に不振傾向
+★★★★★：好走傾向が非常に強く、凡走が少ない  
+★★★★☆：好走傾向があり、安定感のある水準  
+★★★☆☆：平均的水準  
+★★☆☆☆：好走例はあるが、安定感に欠ける  
+★☆☆☆☆：明確に不振傾向  
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
@@ -790,7 +781,7 @@ def analyze_jockey(client, horse_info, data):
         f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']}\n"
         f"{format_data_for_prompt(data)}"
     )
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=800, model=MODEL_MAIN)
+    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=800)
 
 
 def analyze_course(client, horse_info, data):
@@ -801,10 +792,10 @@ def analyze_course(client, horse_info, data):
 ユーザーが指定した「出走馬1頭」について、有馬記念のコース適性を評価してください。
 出力に「*」や「#」を含まないでください。
 
-※本評価は、これまでに実施した
+※本評価は、これまでに実施した  
 - 馬単体評価
-- 騎手評価
-の後続に位置づく評価であり、最終的な「総評」と統合される前提です。
+- 騎手評価  
+の後続に位置づく評価であり、最終的な「総評」と統合される前提です。  
 評価基準や結論をブレさせず、整合性を重視してください。
 
 ## 前提ルール
@@ -819,7 +810,7 @@ def analyze_course(client, horse_info, data):
 　- 枠番別の有馬記念着順割合を参照
 　- 当該枠が有利・不利どちらの傾向かを評価
 
-・距離適性
+・距離適性  
 　- 前走レース別の有馬記念好走傾向を参照
 　- 前走ローテーションが中山芝2500mに繋がりやすい距離帯かを評価
 
@@ -830,11 +821,11 @@ def analyze_course(client, horse_info, data):
 {search_results}
 
 ## ★評価の内部目安（非出力）
-★★★★★：コース形態・距離・馬場傾向に非常に噛み合う
-★★★★☆：有馬記念の舞台条件に適性が高い
-★★★☆☆：適性面で可もなく不可もない
-★★☆☆☆：舞台条件とややズレがあり、割引が必要
-★☆☆☆☆：舞台条件との不適合が大きい
+★★★★★：コース形態・距離・馬場傾向に非常に噛み合う  
+★★★★☆：有馬記念の舞台条件に適性が高い  
+★★★☆☆：適性面で可もなく不可もない  
+★★☆☆☆：舞台条件とややズレがあり、割引が必要  
+★☆☆☆☆：舞台条件との不適合が大きい  
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
@@ -852,7 +843,7 @@ def analyze_course(client, horse_info, data):
         f"前走:{horse_info['前走']}\n"
         f"{format_data_for_prompt(data)}"
     )
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=800, model=MODEL_MAIN)
+    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=800)
 
 
 def analyze_total(client, horse_info, h_res, j_res, c_res):
@@ -869,36 +860,36 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
 - コース適性評価（当年条件への適合度）
 
 ## 総評ロジック
-- 評価は「掛け合わせ」で行う。
-- いずれか1項目が低評価の場合、他が高評価でもリスクとして必ず反映すること。
+ -評価は「掛け合わせ」で行う。
+-いずれか1項目が低評価の場合、他が高評価でもリスクとして必ず反映すること。
 - 特に以下の役割を明確にする：
-　・馬単体評価＝素材としての有馬記念適性
-　・コース適性評価＝今年の条件との噛み合い
+　・馬単体評価＝素材としての有馬記念適性  
+　・コース適性評価＝今年の条件との噛み合い  
 　・騎手評価＝取りこぼしリスク（減点要素）
 
 ## WEB検索結果
 {search_results}
 
 ## ★評価の内部目安（非出力）
-★★★★★：3評価すべてが高水準で、致命的リスクなし
-★★★★☆：高水準だが一部に明確な注意点あり
-★★★☆☆：評価は揃うが、強調材料に欠ける
-★★☆☆☆：明確な不安要素が優勢
-★☆☆☆☆：複数評価で不利が重なる
+★★★★★：3評価すべてが高水準で、致命的リスクなし  
+★★★★☆：高水準だが一部に明確な注意点あり  
+★★★☆☆：評価は揃うが、強調材料に欠ける  
+★★☆☆☆：明確な不安要素が優勢  
+★☆☆☆☆：複数評価で不利が重なる  
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式（厳守）
 以下の形式でのみ出力すること。
 
 【評価】
-☆☆☆☆☆
-【コメント】
-(馬、騎手、コースの3評価を掛け合わせた結論を3〜4文で簡潔に記述)
+☆☆☆☆☆  
+【コメント】  
+(馬、騎手、コースの3評価を掛け合わせた結論を3〜4文で簡潔に記述) 
 
-【馬券的妙味】
-(軸向き／相手向き／ヒモ向き／見送り のいずれかを明示し理由を補足。軸向き等の用語についても解説を入れてください。)
+【馬券的妙味】  
+(軸向き／相手向き／ヒモ向き／見送り のいずれかを明示し理由を補足。軸向き等の用語についても解説を入れてください。)  
 
-【一言】
+【一言】  
 (判断を象徴する短いフレーズを記載)
 """
     user_prompt = (
@@ -907,8 +898,7 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
         f"騎手分析:{j_res}\n"
         f"コース分析:{c_res}"
     )
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=800, model=MODEL_MAIN)
-
+    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=800)
 
 # ============================================
 # 機能③: サイン理論（3段階）
@@ -921,89 +911,105 @@ def get_events_2025(client):
 def extract_numbers(client, events):
     system_prompt = f"""
 ## 指示
-あなたは2025年の象徴的な出来事から有馬記念のサインを読み解く専門家です。
+あなたは2025年の象徴的な出来事から有馬記念のサインを読み解く専門家です。 
 有馬記念（中山芝2500m）に特化し、2025年の主要なニュースから関連する数字や事象を抽出してください。
 出力に「*」や「#」を含まないでください。
 
 ## 原則
-・ユーザーの入力形式は自由とする
-・結論 → 理由 → 補足 の順で説明する
-・補足では結論や理由に対する信ぴょう性を増すような具体的かつ意味深な小話を語ってください。（陰謀論的なこじつけの小話で良いです。さも、常識かのように語ってください。）
+・ユーザーの入力形式は自由とする 
+・結論 → 理由 → 補足 の順で説明する 
+・補足では結論や理由に対する信ぴょう性を増すような具体的かつ意味深な小話を語ってください。（陰謀論的なこじつけの小話で良いです。さも、常識かのように語ってください。
 ・専門用語は使ってよいが、必ず一言補足を添える
 ・陰謀論的な考え方が面白いかもしれません。
 ・一定の納得感を醸成するような巧みな語り口でお願いします。
 
 ## 分析フロー
 ### STEP1 サインの抽出
-2025年の象徴的な出来事から、馬番、枠番、馬名、騎手名、あるいはその他の関連情報に結びつけられる可能性のある具体的な「サイン候補」を複数抽出する。
+2025年の象徴的な出来事から、馬番、枠番、馬名、騎手名、あるいはその他の関連情報に結びつけられる可能性のある具体的な「サイン候補」を複数抽出する。 例：
+・特定の記念日 → 日付の数字を馬番・枠番に
+・流行語に入っている数字 →数字を馬番に
+・スポーツイベントの優勝回数や順位 → 数字を馬番に
+・特定の有名人のイニシャル → 馬名や騎手名の連想
+・社会現象の象徴的な色 → 枠色からの連想
 
 ### STEP2 サインの評価
 抽出された複数のサイン候補について、以下の軸で評価し、2025年有馬記念で見るべきサインを明らかにする。
 A. 話題性・認知度
+その出来事が2025年においてどれだけ多くの人に知られ、話題になったか。
 B. 物語性・意外性
+サインとしての面白さ、偶然性、または逆説的な解釈の余地。
 C. 複数要素との合致
+一つの出来事から複数のサインが導き出される、または複数の出来事が一つのサインを指し示すなど。
 
 ## 出力形式
-【結論】
+【結論】 
 ・2025年の主要サイン候補と、そこから抽出された数字・キーワードのリスト
 ・サイン解釈におけるAIの判断基準（例：直接性重視、話題性重視など）
 
 ## 禁止事項
-・ユーザーの意見に迎合すること
+・ユーザーの意見に迎合すること 
 ・キリのいい数字ばかり選ばないでください。複雑な数字こそ奥深い考察ができるはずです。
 
 ## 出走馬情報
 {HORSE_INFO_STR_2025}
 """
-    user_prompt = f"出来事:\n{events}"
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=3000, model=MODEL_MAIN)
+    return _call_gpt5mini_text(
+        client=client,
+        system_prompt=system_prompt,
+        user_prompt=f"出来事:\n{events}",
+        max_output_tokens=10000,
+    )
 
 
 def sign_betting(client, events, numbers):
     system_prompt = f"""
 ## 指示
-あなたは2025年の象徴的な出来事から有馬記念のサインを読み解き、買い目を導き出す専門AIエージェントです。
-有馬記念（中山芝2500m）に特化し、2025年の象徴的な出来事から抽出されたサインをもとに、
-競馬初心者でも納得しながら意思決定できる形で買い目を提示してください。
+あなたは2025年の象徴的な出来事から有馬記念のサインを読み解き、買い目を導き出す専門AIエージェントです。 
+有馬記念（中山芝2500m）に特化し、2025年の象徴的な出来事から抽出されたサインをもとに、競馬初心者でも納得しながら意思決定できる形で買い目を提示してください。
 出力に「*」や「#」を含まないでください。
 
 ## 出力フロー
 サインの評価と2025年有馬記念の出走馬にもとづいて、以下の軸に基づいて出走馬を評価し、買い目を出力する
 A. 関連性の強さ
+出来事と馬番・馬名などとの結びつきの直接性・明確さ。
 B. 複数要素との合致
+一つのサインから複数の馬番や馬名が導き出される、または複数のサインが一つの馬番を指し示すなど。
 
 ## 原則
-・ユーザーの入力形式は自由とする
-・会話の中でサインの評価・理由・買い方を柔軟に提示してよいが、AIのサイン分析軸・解釈基準は常に一貫させる
-・結論 → 理由 → 補足 の順で説明する
-・専門用語は使ってよいが、必ず一言補足を添える
+・ユーザーの入力形式は自由とする 
+・会話の中でサインの評価・理由・買い方を柔軟に提示してよいが、AIのサイン分析軸・解釈基準は常に一貫させる 
+・結論 → 理由 → 補足 の順で説明する 
+・専門用語は使ってよいが、必ず一言補足を添える 
 
 ## 出力形式（初回・まとめ時）
-【結論】
+【結論】 
 ◎本命サイン馬 (理由：2025年のどの出来事とどう関連するか、なぜ本命か)
 ○対抗サイン馬 (理由：同様)
 ▲単穴サイン馬 (理由：同様)
 ☆穴サイン馬 (理由：同様)
 ✕関連薄サイン馬 (理由：なぜ関連が薄いと判断したか)
 
-【買い方の例】
-・単勝：最大2点
+【買い方の例】 
+・単勝：最大2点 
 ・馬連：最大3点
-・三連複：最大6点
+・三連複：最大6点 
 ・資金配分：安全型 / 攻め型（サインの強度に応じて）
 
 ## 禁止事項
-・人気順のみでの評価（サイン馬券は人気薄が本命になることも多い）
-・内部評価軸（サイン解釈の基準）を会話によって変更すること
-・ユーザーの意見に迎合すること
+・人気順のみでの評価（サイン馬券は人気薄が本命になることも多い） 
+・内部評価軸（サイン解釈の基準）を会話によって変更すること 
+・ユーザーの意見に迎合すること 
 ・一般的な競馬のデータ分析や馬の能力評価に偏りすぎること。あくまで「サイン」を主軸とする。
 
 ## 出走馬情報
 {HORSE_INFO_STR_2025}
 """
-    user_prompt = f"出来事:\n{events}\n考察:\n{numbers}"
-    return _responses_text(client, system_prompt, user_prompt, max_output_tokens=3000, model=MODEL_MAIN)
-
+    return _call_gpt5mini_text(
+        client=client,
+        system_prompt=system_prompt,
+        user_prompt=f"出来事:\n{events}\n考察:\n{numbers}",
+        max_output_tokens=10000,
+    )
 
 # ============================================
 # メインUI
@@ -1036,17 +1042,19 @@ def main():
         sb_body = st.empty()
 
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
-
     render_sidebar_search(sb_debug, sb_body)
 
     # =========================
     # タブ1: 総合予想（再実行時に前回結果を全消し）
     # =========================
     with tab1:
-        st.markdown("""<div class="feature-card">
+        st.markdown(
+            """<div class="feature-card">
             <h3>🎯 総合予想機能</h3>
             <p>STEP1: データ傾向分析 → STEP2: 馬の選定 → STEP3: 買い目提案</p>
-        </div>""", unsafe_allow_html=True)
+        </div>""",
+            unsafe_allow_html=True,
+        )
 
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -1073,7 +1081,6 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
-                # 再実行：前回出力を全消し
                 comp["step1"] = None
                 comp["step2"] = None
                 comp["step3"] = None
@@ -1084,7 +1091,6 @@ def main():
                 ph1.info("📊 分析中...")
                 ensure_daily_gpt_search(client, search_query)
                 render_sidebar_search(sb_debug, sb_body)
-
                 comp["step1"] = analyze_data_summary(client, data)
                 ph1.markdown(render_box("📊 データ傾向", comp["step1"], "result-box"), unsafe_allow_html=True)
 
@@ -1100,10 +1106,13 @@ def main():
     # タブ2: 単体評価（馬ごとに結果を保持）
     # =========================
     with tab2:
-        st.markdown("""<div class="feature-card">
+        st.markdown(
+            """<div class="feature-card">
             <h3>🔍 単体評価機能</h3>
             <p>馬・騎手・コースの3軸で分析 → 統合評価</p>
-        </div>""", unsafe_allow_html=True)
+        </div>""",
+            unsafe_allow_html=True,
+        )
 
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -1115,7 +1124,7 @@ def main():
                     f" {HORSE_LIST_2025[x]['馬番']}｜"
                     f"{HORSE_LIST_2025[x]['馬名']}（{HORSE_LIST_2025[x]['騎手']}）"
                 ),
-                key="horse_select"
+                key="horse_select",
             )
             eval_btn = st.button("🔍 評価スタート", key="eval_btn", use_container_width=True)
 
@@ -1179,10 +1188,13 @@ def main():
     # タブ3: サイン理論（再実行時に前回結果を全消し）
     # =========================
     with tab3:
-        st.markdown("""<div class="feature-card">
+        st.markdown(
+            """<div class="feature-card">
             <h3>🔮 サイン理論機能</h3>
             <p>2025年の出来事から数字を読み解く ※エンターテイメント</p>
-        </div>""", unsafe_allow_html=True)
+        </div>""",
+            unsafe_allow_html=True,
+        )
 
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -1238,12 +1250,13 @@ def main():
                 sign["bet"] = b_res
                 ph_b.markdown(render_box("", b_res, "analysis-box box-buy"), unsafe_allow_html=True)
 
-    # フッター
     st.markdown("---")
-    st.markdown("""<div style="text-align:center;color:#999;padding:1rem;">
+    st.markdown(
+        """<div style="text-align:center;color:#999;padding:1rem;">
         🏇 第70回 有馬記念 PREDICTOR 2025
-    </div>""", unsafe_allow_html=True)
-
+    </div>""",
+        unsafe_allow_html=True,
+    )
 
 if __name__ == "__main__":
     main()
