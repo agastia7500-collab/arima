@@ -532,6 +532,9 @@ def analyze_data_summary(client, data):
 
 ## 出走馬情報
 {HORSE_INFO_STR_2025}
+
+## WEB検索結果
+{search_results}
  """
     r = client.chat.completions.create(
         model="gpt-4o",
@@ -603,7 +606,11 @@ F. 当日要素
 ・人気順のみでの評価
 
 ## 出走馬情報
-{HORSE_INFO_STR_2025}"""
+{HORSE_INFO_STR_2025}
+
+## WEB検索結果
+{search_results}
+"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
@@ -628,7 +635,11 @@ def suggest_betting(client, prediction):
 ・資金配分：安全型 / 
 
 ## 出走馬情報
-{HORSE_INFO_STR_2025}"""
+{HORSE_INFO_STR_2025}
+
+## WEB検索結果
+{search_results}
+"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
@@ -659,6 +670,9 @@ def analyze_horse(client, horse_info, data):
 ・ 前走結果評価
 　- 前走レース別の有馬記念着順割合を参照
 　- 有馬記念に繋がりやすいローテ・成績かを評価
+
+## WEB検索結果
+{search_results}
 
 ## ★評価の内部目安（非出力）
 ★★★★★：有馬記念の負荷条件でも能力低下がほぼ見られない
@@ -702,6 +716,9 @@ def analyze_jockey(client, horse_info, data):
 ・好走傾向  
 ・平均的  
 ・不振傾向  
+
+## WEB検索結果
+{search_results}
 
 ## ★評価の内部目安（非出力）
 ★★★★★：好走傾向が非常に強く、凡走が少ない  
@@ -760,6 +777,9 @@ def analyze_course(client, horse_info, data):
 ・展開予想
 　- 想定ペース（S/M/H）を前提とし当該馬の脚質タイプが有馬記念で有利・不利になりやすいかを評価
 
+## WEB検索結果
+{search_results}
+
 ## ★評価の内部目安（非出力）
 ★★★★★：コース形態・距離・馬場傾向に非常に噛み合う  
 ★★★★☆：有馬記念の舞台条件に適性が高い  
@@ -807,6 +827,9 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
 　・馬単体評価＝素材としての有馬記念適性  
 　・コース適性評価＝今年の条件との噛み合い  
 　・騎手評価＝取りこぼしリスク（減点要素）
+
+## WEB検索結果
+{search_results}
 
 ## ★評価の内部目安（非出力）
 ★★★★★：3評価すべてが高水準で、致命的リスクなし  
