@@ -397,13 +397,13 @@ search_query = """
 # ============================================
 # Web検索機能
 # ============================================
-def gpt_web_search(client, prompt: str) -> str:
-    response = client.responses.create(
-        model="gpt-5-mini",
-        tools=[{"type": "web_search"}],
-        input=prompt,              # ← search_query をそのまま入れる
-        max_output_tokens=3000,     # 出力量制御
-    )
+def gpt_web_search(client, prompt: str) -> str: 
+    response = client.responses.create( 
+        model="gpt-4.1", 
+        tools=[{"type": "web_search"}], 
+        input=prompt, # ← search_query をそのまま入れる 
+        max_output_tokens=3000, # 出力量制御 
+    ) 
     return response.output_text
 
 def ensure_daily_gpt_search(client, query: str) -> str:
