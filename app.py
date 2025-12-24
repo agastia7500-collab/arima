@@ -924,17 +924,17 @@ def main():
                 st.error(f"検索に失敗: {e}")
 
         # 検索結果（LLM後）を表示
-　　　　if st.session_state.get("search_results"):
- 　　　　   st.markdown("---")
-　　　　    st.markdown("### 🔎 Web検索結果（LLM処理後）")
-   　　　　 st.markdown(
-     　　　　   render_box(
-        　　　　    "検索結果",
-        　　　　    st.session_state["search_results"],
-       　　　　     "analysis-box"
-    　　　　    ),
-      　　　　  unsafe_allow_html=True
- 　　　　   )
+        if st.session_state.get("search_results"):
+           st.markdown("---")
+           st.markdown("### 🔎 Web検索結果（LLM処理後）")
+           st.markdown(
+               render_box(
+                   "検索結果",
+                   st.session_state["search_results"],
+                   "analysis-box"
+               ),
+            unsafe_allow_html=True
+         )
      
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
