@@ -348,66 +348,74 @@ EVENTS_2025_STR = """【2025年の主な出来事】
 # ============================================
 # Web検索機能
 # ============================================
-def google_search(query: str, num: int = 5) -> List[Dict[str, str]]:
-    api_key = st.secrets.get("GOOGLE_CSE_API_KEY", os.environ.get("GOOGLE_CSE_API_KEY"))
-    cx = st.secrets.get("GOOGLE_CSE_CX", os.environ.get("GOOGLE_CSE_CX"))
-    if not api_key or not cx:
-        raise RuntimeError("GOOGLE_CSE_API_KEY / GOOGLE_CSE_CX が未設定です")
-
-    url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        "key": api_key,
-        "cx": cx,
-        "q": query,
-        "num": max(1, min(num, 10)),
-        "hl": "ja",
-        "gl": "jp",
-    }
-    r = requests.get(url, params=params, timeout=20)
-    r.raise_for_status()
-    data = r.json()
-
-    results = []
-    for it in data.get("items", []):
-        results.append({
-            "title": it.get("title", ""),
-            "link": it.get("link", ""),
-            "snippet": it.get("snippet", ""),
-        })
-    return results
-
-def format_search_results(results):
-    """
-    Google検索結果（list[dict]）を LLMに渡すテキストへ変換
-    """
-    if not results:
-        return "検索結果なし"
-
-    lines = []
-    for i, r in enumerate(results, 1):
-        title = r.get("title", "")
-        link = r.get("link", "")
-        snippet = r.get("snippet", "")
-        lines.append(f"[{i}] {title}\nURL: {link}\nSNIP: {snippet}\n")
-    return "\n".join(lines).strip()
-
-def summarize_search_with_llm(client, search_text: str) -> str:
-    system_prompt = """
-あなたは競馬情報整理アシスタントです。
-以下のWeb検索結果を読み、重要な事実情報だけを簡潔に整理してください。
-推測や断定はしないでください。
-"""
-
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": search_text}
-        ],
-        temperature=0.2,
-        max_tokens=3000,
+def gpt_web_search(client, query: str) -> str:
+    response = client.responses.create(
+        model="gpt-4.1",
+        tools=[{"type": "web_search"}],
+        input=query,
     )
-    return r.choices[0].message.content
+    return response.output_text
+
+# def google_search(query: str, num: int = 5) -> List[Dict[str, str]]:
+#     api_key = st.secrets.get("GOOGLE_CSE_API_KEY", os.environ.get("GOOGLE_CSE_API_KEY"))
+#     cx = st.secrets.get("GOOGLE_CSE_CX", os.environ.get("GOOGLE_CSE_CX"))
+#     if not api_key or not cx:
+#         raise RuntimeError("GOOGLE_CSE_API_KEY / GOOGLE_CSE_CX が未設定です")
+
+#     url = "https://www.googleapis.com/customsearch/v1"
+#     params = {
+#         "key": api_key,
+#         "cx": cx,
+#         "q": query,
+#         "num": max(1, min(num, 10)),
+#         "hl": "ja",
+#         "gl": "jp",
+#     }
+#     r = requests.get(url, params=params, timeout=20)
+#     r.raise_for_status()
+#     data = r.json()
+
+#     results = []
+#     for it in data.get("items", []):
+#         results.append({
+#             "title": it.get("title", ""),
+#             "link": it.get("link", ""),
+#             "snippet": it.get("snippet", ""),
+#         })
+#     return results
+
+# def format_search_results(results):
+#     """
+#     Google検索結果（list[dict]）を LLMに渡すテキストへ変換
+#     """
+#     if not results:
+#         return "検索結果なし"
+
+#     lines = []
+#     for i, r in enumerate(results, 1):
+#         title = r.get("title", "")
+#         link = r.get("link", "")
+#         snippet = r.get("snippet", "")
+#         lines.append(f"[{i}] {title}\nURL: {link}\nSNIP: {snippet}\n")
+#     return "\n".join(lines).strip()
+
+# def summarize_search_with_llm(client, search_text: str) -> str:
+#     system_prompt = """
+# あなたは競馬情報整理アシスタントです。
+# 以下のWeb検索結果を読み、重要な事実情報だけを簡潔に整理してください。
+# 推測や断定はしないでください。
+# """
+
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[
+#             {"role": "system", "content": system_prompt},
+#             {"role": "user", "content": search_text}
+#         ],
+#         temperature=0.2,
+#         max_tokens=3000,
+#     )
+#     return r.choices[0].message.content
 
 # ============================================
 # 機能①: 総合予想（3段階）
@@ -902,59 +910,98 @@ def main():
     with st.sidebar:
         st.markdown("### ⚙️ 設定")
         uploaded_file = st.file_uploader("📁 予想データ", type=["xlsx", "xls"])
-
-        if uploaded_file:
-            data = load_race_data(uploaded_file)
-            st.success("✅ データ読み込み完了")
-        else:
-            data = load_race_data()
-            if data:
-                st.info("📊 デフォルトデータ使用中")
-            else:
-                st.warning("⚠️ データなし（分析精度低下）")
-                data = {}
-
+        
         st.markdown("---")
-        st.markdown("### 🐴 2025年 出走予定馬")
-        for num, info in HORSE_LIST_2025.items():
-            st.markdown(f"**{info['馬名']}** ({info['騎手']})")
-
-        st.markdown("---")
-        st.markdown("### 🔎 Web検索（Google）")
-
-        q = st.text_input("検索クエリ", value="2025 有馬記念 枠順")
-        do_search = st.button("検索", use_container_width=True)
-
+        st.markdown("### 🔎 Web検索（GPT）")
+        
+        q = st.text_input("検索クエリ", value="2025 有馬記念 枠順 騎手 出走馬")
+        do_search = st.button("検索（GPT）", use_container_width=True)
+        
         if do_search:
-            try:
-                raw = google_search(q, num=5)
-                st.session_state["search_raw"] = raw   # ← raw を保存
-
-                search_text = format_search_results(raw)
-                llm_result = summarize_search_with_llm(client, search_text)
-
-                st.session_state["search_results"] = llm_result
-                st.success("✅ raw / LLM後 の両方を保存しました")
-            except Exception as e:
-                st.error(f"検索に失敗: {e}")
-
-        # 検索結果 (raw) を表示
+            if client is None:
+                st.error("APIキーを設定してください")
+            else:
+                try:
+                    resp = gpt_web_search(client, q)  # ← あなたが追加済みの関数（respを返す想定）
+        
+                    # 保存：LLM後（読む用）
+                    st.session_state["search_results"] = getattr(resp, "output_text", None) or str(resp)
+        
+                    # 保存：raw（デバッグ用） - 可能ならdict化して保存
+                    try:
+                        st.session_state["search_raw"] = resp.model_dump()
+                    except Exception:
+                        # model_dumpできないSDK/型の場合の保険
+                        st.session_state["search_raw"] = {"repr": repr(resp), "str": str(resp)}
+        
+                    st.success("✅ 検索結果を保存しました（raw / LLM後）")
+                except Exception as e:
+                    st.error(f"検索に失敗: {e}")
+        
+        # ---- 表示（raw）----
         if st.session_state.get("search_raw"):
-           st.markdown("### 🔍 Web検索結果（RAW）")
-           st.json(st.session_state["search_raw"])
-
-        # 検索結果（LLM後）を表示
+            with st.expander("RAW（Responses）", expanded=False):
+                st.json(st.session_state["search_raw"])
+        
+        # ---- 表示（LLM後）----
         if st.session_state.get("search_results"):
-           st.markdown("---")
-           st.markdown("### 🔎 Web検索結果（LLM処理後）")
-           st.markdown(
-               render_box(
-                   "検索結果",
-                   st.session_state["search_results"],
-                   "analysis-box"
-               ),
-            unsafe_allow_html=True
-         )
+            st.markdown(
+                render_box("検索結果（LLM後）", st.session_state["search_results"], "analysis-box"),
+                unsafe_allow_html=True
+            )
+
+        # if uploaded_file:
+        #     data = load_race_data(uploaded_file)
+        #     st.success("✅ データ読み込み完了")
+        # else:
+        #     data = load_race_data()
+        #     if data:
+        #         st.info("📊 デフォルトデータ使用中")
+        #     else:
+        #         st.warning("⚠️ データなし（分析精度低下）")
+        #         data = {}
+
+        # st.markdown("---")
+        # st.markdown("### 🐴 2025年 出走予定馬")
+        # for num, info in HORSE_LIST_2025.items():
+        #     st.markdown(f"**{info['馬名']}** ({info['騎手']})")
+
+        # st.markdown("---")
+        # st.markdown("### 🔎 Web検索（Google）")
+
+        # q = st.text_input("検索クエリ", value="2025 有馬記念 枠順")
+        # do_search = st.button("検索", use_container_width=True)
+
+        # if do_search:
+        #     try:
+        #         raw = google_search(q, num=5)
+        #         st.session_state["search_raw"] = raw   # ← raw を保存
+
+        #         search_text = format_search_results(raw)
+        #         llm_result = summarize_search_with_llm(client, search_text)
+
+        #         st.session_state["search_results"] = llm_result
+        #         st.success("✅ raw / LLM後 の両方を保存しました")
+        #     except Exception as e:
+        #         st.error(f"検索に失敗: {e}")
+
+        # # 検索結果 (raw) を表示
+        # if st.session_state.get("search_raw"):
+        #    st.markdown("### 🔍 Web検索結果（RAW）")
+        #    st.json(st.session_state["search_raw"])
+
+        # # 検索結果（LLM後）を表示
+        # if st.session_state.get("search_results"):
+        #    st.markdown("---")
+        #    st.markdown("### 🔎 Web検索結果（LLM処理後）")
+        #    st.markdown(
+        #        render_box(
+        #            "検索結果",
+        #            st.session_state["search_results"],
+        #            "analysis-box"
+        #        ),
+        #     unsafe_allow_html=True
+        #  )
      
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
