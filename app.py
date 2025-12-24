@@ -356,67 +356,6 @@ def gpt_web_search(client, query: str) -> str:
     )
     return response.output_text
 
-# def google_search(query: str, num: int = 5) -> List[Dict[str, str]]:
-#     api_key = st.secrets.get("GOOGLE_CSE_API_KEY", os.environ.get("GOOGLE_CSE_API_KEY"))
-#     cx = st.secrets.get("GOOGLE_CSE_CX", os.environ.get("GOOGLE_CSE_CX"))
-#     if not api_key or not cx:
-#         raise RuntimeError("GOOGLE_CSE_API_KEY / GOOGLE_CSE_CX が未設定です")
-
-#     url = "https://www.googleapis.com/customsearch/v1"
-#     params = {
-#         "key": api_key,
-#         "cx": cx,
-#         "q": query,
-#         "num": max(1, min(num, 10)),
-#         "hl": "ja",
-#         "gl": "jp",
-#     }
-#     r = requests.get(url, params=params, timeout=20)
-#     r.raise_for_status()
-#     data = r.json()
-
-#     results = []
-#     for it in data.get("items", []):
-#         results.append({
-#             "title": it.get("title", ""),
-#             "link": it.get("link", ""),
-#             "snippet": it.get("snippet", ""),
-#         })
-#     return results
-
-# def format_search_results(results):
-#     """
-#     Google検索結果（list[dict]）を LLMに渡すテキストへ変換
-#     """
-#     if not results:
-#         return "検索結果なし"
-
-#     lines = []
-#     for i, r in enumerate(results, 1):
-#         title = r.get("title", "")
-#         link = r.get("link", "")
-#         snippet = r.get("snippet", "")
-#         lines.append(f"[{i}] {title}\nURL: {link}\nSNIP: {snippet}\n")
-#     return "\n".join(lines).strip()
-
-# def summarize_search_with_llm(client, search_text: str) -> str:
-#     system_prompt = """
-# あなたは競馬情報整理アシスタントです。
-# 以下のWeb検索結果を読み、重要な事実情報だけを簡潔に整理してください。
-# 推測や断定はしないでください。
-# """
-
-#     r = client.chat.completions.create(
-#         model="gpt-4o",
-#         messages=[
-#             {"role": "system", "content": system_prompt},
-#             {"role": "user", "content": search_text}
-#         ],
-#         temperature=0.2,
-#         max_tokens=3000,
-#     )
-#     return r.choices[0].message.content
-
 # ============================================
 # 機能①: 総合予想（3段階）
 # ============================================
@@ -466,23 +405,23 @@ def analyze_data_summary(client, data):
 【レース全体のペース傾向】
 {内容を簡潔に記載}
 【年齢】
-{○○歳の馬が好走しやすい傾向といった内容を簡潔に記載}
+(○○歳の馬が好走しやすい傾向といった内容を簡潔に記載)
 【枠順】  
-{～～という傾向といった形式で内容を簡潔に記載}
+(～～という傾向といった形式で内容を簡潔に記載)
 【前走レース】
-{～～という傾向といった形式で内容を簡潔に記載}
+(～～という傾向といった形式で内容を簡潔に記載)
 【血統】
-{～～という傾向といった形式で内容を簡潔に記載}
+(～～という傾向といった形式で内容を簡潔に記載)
 【騎手】
-{～～という傾向といった形式で内容を簡潔に記載}
+(～～という傾向といった形式で内容を簡潔に記載)
 【馬体重】
-{～～という傾向といった形式で内容を簡潔に記載}
+(～～という傾向といった形式で内容を簡潔に記載)
 【コース形態】
-{内容を簡潔に記載}
+(内容を簡潔に記載)
 【求められる能力】
-{内容を簡潔に記載}
+(内容を簡潔に記載)
 【不利になりやすいタイプ】
-{内容を簡潔に記載}
+(内容を簡潔に記載)
 
 ## 出走馬情報
 {HORSE_INFO_STR_2025}
@@ -623,12 +562,13 @@ def analyze_horse(client, horse_info, data):
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
-【馬単体評価】
-・総合評価：★☆☆☆☆
-・評価：2-3文
-　・血統評価：1文
-　・年齢評価：1文
-　・前走結果評価：1文"""
+【総合評価】
+☆☆☆☆☆
+【コメント】
+(2-3文で記載)
+・血統評価：(1文で記載)
+・年齢評価：(1文で記載)
+・前走結果評価：(1文で記載)"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
@@ -665,9 +605,10 @@ def analyze_jockey(client, horse_info, data):
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
-【騎手評価】
-・総合評価：★☆☆☆☆
-・評価：2-3文"""
+【総合評価】
+☆☆☆☆☆
+【コメント】
+(2-3文で記載)"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
@@ -721,12 +662,13 @@ def analyze_course(client, horse_info, data):
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
-【コース適正評価】
-・総合評価：☆☆☆☆☆
-・評価：2-3文
-　・枠順：：1文
-　・距離適性：1文
-　・展開予想：1文"""
+【総合評価】
+☆☆☆☆☆
+【コメント】
+(2-3文で総評を記載)
+・枠順：(1文で記載)
+・距離適性：(1文で記載)
+・展開予想：(1文で記載)"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
@@ -770,14 +712,16 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
 ## 出力形式（厳守）
 以下の形式でのみ出力すること。
 
-■ 総合評価: ☆☆☆☆☆  
-■ 総評:  
-　（馬、騎手、コースの3評価を掛け合わせた結論を3〜4文で簡潔に記述）  
-■ 馬券的妙味:  
-　（軸向き／相手向き／ヒモ向き／見送り のいずれかを明示し理由を補足。軸向き等の用語についても解説を入れてください。）  
-■ 一言:  
-　（判断を象徴する短いフレーズ）
-"""
+【総合評価】
+☆☆☆☆☆  
+【コメント】  
+(馬、騎手、コースの3評価を掛け合わせた結論を3〜4文で簡潔に記述) 
+
+【馬券的妙味】  
+(軸向き／相手向き／ヒモ向き／見送り のいずれかを明示し理由を補足。軸向き等の用語についても解説を入れてください。)  
+
+【一言】  
+(判断を象徴する短いフレーズを記載)"""
     r = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "system", "content": system_prompt},
@@ -937,71 +881,13 @@ def main():
                     st.success("✅ 検索結果を保存しました（raw / LLM後）")
                 except Exception as e:
                     st.error(f"検索に失敗: {e}")
-        
-        # ---- 表示（raw）----
-        if st.session_state.get("search_raw"):
-            with st.expander("RAW（Responses）", expanded=False):
-                st.json(st.session_state["search_raw"])
-        
-        # ---- 表示（LLM後）----
+                
+        # ---- 表示----
         if st.session_state.get("search_results"):
             st.markdown(
-                render_box("検索結果（LLM後）", st.session_state["search_results"], "analysis-box"),
+                render_box("検索結果", st.session_state["search_results"], "analysis-box"),
                 unsafe_allow_html=True
             )
-
-        # if uploaded_file:
-        #     data = load_race_data(uploaded_file)
-        #     st.success("✅ データ読み込み完了")
-        # else:
-        #     data = load_race_data()
-        #     if data:
-        #         st.info("📊 デフォルトデータ使用中")
-        #     else:
-        #         st.warning("⚠️ データなし（分析精度低下）")
-        #         data = {}
-
-        # st.markdown("---")
-        # st.markdown("### 🐴 2025年 出走予定馬")
-        # for num, info in HORSE_LIST_2025.items():
-        #     st.markdown(f"**{info['馬名']}** ({info['騎手']})")
-
-        # st.markdown("---")
-        # st.markdown("### 🔎 Web検索（Google）")
-
-        # q = st.text_input("検索クエリ", value="2025 有馬記念 枠順")
-        # do_search = st.button("検索", use_container_width=True)
-
-        # if do_search:
-        #     try:
-        #         raw = google_search(q, num=5)
-        #         st.session_state["search_raw"] = raw   # ← raw を保存
-
-        #         search_text = format_search_results(raw)
-        #         llm_result = summarize_search_with_llm(client, search_text)
-
-        #         st.session_state["search_results"] = llm_result
-        #         st.success("✅ raw / LLM後 の両方を保存しました")
-        #     except Exception as e:
-        #         st.error(f"検索に失敗: {e}")
-
-        # # 検索結果 (raw) を表示
-        # if st.session_state.get("search_raw"):
-        #    st.markdown("### 🔍 Web検索結果（RAW）")
-        #    st.json(st.session_state["search_raw"])
-
-        # # 検索結果（LLM後）を表示
-        # if st.session_state.get("search_results"):
-        #    st.markdown("---")
-        #    st.markdown("### 🔎 Web検索結果（LLM処理後）")
-        #    st.markdown(
-        #        render_box(
-        #            "検索結果",
-        #            st.session_state["search_results"],
-        #            "analysis-box"
-        #        ),
-        #     unsafe_allow_html=True
-        #  )
      
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
