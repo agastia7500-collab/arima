@@ -12,6 +12,11 @@ import time
 import requests
 from typing import List, Dict
 
+from datetime import datetime, timezone, timedelta
+JST = timezone(timedelta(hours=9))
+
+
+
 # ============================================
 # ページ設定
 # ============================================
@@ -31,10 +36,10 @@ if "eval_results" not in st.session_state:
     st.session_state["eval_results"] = {}
 if "sign_results" not in st.session_state:
     st.session_state["sign_results"] = {"events": None, "numbers": None, "bet": None}
-if "search_raw" not in st.session_state:
-    st.session_state["search_raw"] = None
 if "search_results" not in st.session_state:
     st.session_state["search_results"] = None
+if "search_date_jst" not in st.session_state:
+    st.session_state["search_date_jst"] = None
 
 # ============================================
 # 表示ヘルパー（白文字問題の根本対策）
@@ -345,16 +350,61 @@ EVENTS_2025_STR = """【2025年の主な出来事】
    - 関連数字: 64 (第64作), 1 (1月放送開始)
 """
 
+search_query = """
+あなたは有馬記念（中山芝2500m）の一次情報を調査するアシスタントです。
+以下について、WEB検索を行い、事実ベースで整理してください。
+
+【調査対象】
+- 2025年 有馬記念
+- 出走予定馬
+- 枠順の確定状況
+- 騎手の確定状況
+- 公式発表・一次情報
+
+【出力要件】
+- JRA・主催者・公式情報を最優先
+- 推測・予想・主観は含めない
+- 確定情報 / 未確定情報 を分ける
+- 箇条書きで20項目以上
+- 重要度順に整理
+"""
+
 # ============================================
 # Web検索機能
 # ============================================
-def gpt_web_search(client, query: str) -> str:
+def gpt_web_search(client, prompt: str) -> str:
     response = client.responses.create(
         model="gpt-4.1",
         tools=[{"type": "web_search"}],
-        input=query,
+        input=prompt,              # ← search_query をそのまま入れる
+        max_output_tokens=3000,     # 出力量制御
     )
     return response.output_text
+
+
+def ensure_daily_gpt_search(client, query: str) -> str:
+    """
+    tab1/2/3のどこから呼ばれても、
+    JSTで「その日1回」だけ GPT検索を実行し、結果を session_state に保存して返す。
+    """
+    if client is None:
+        return None
+
+    today = datetime.now(JST).date().isoformat()
+
+    # すでに今日の分があれば再利用
+    if st.session_state.get("search_date_jst") == today and st.session_state.get("search_results"):
+        return st.session_state["search_results"]
+
+    # 今日の分がなければ実行
+    resp = gpt_web_search(client, query)
+    text = getattr(resp, "output_text", None)
+    if not text:
+        text = str(resp)
+
+    st.session_state["search_results"] = text
+    st.session_state["search_date_jst"] = today
+    return text
 
 # ============================================
 # 機能①: 総合予想（3段階）
@@ -888,6 +938,13 @@ def main():
                 render_box("検索結果", st.session_state["search_results"], "analysis-box"),
                 unsafe_allow_html=True
             )
+
+        st.markdown("---")
+        if st.button("🔄 今日の検索をリセット", use_container_width=True):
+            st.session_state["search_date_jst"] = None
+            st.session_state["search_results"] = None
+            st.success("検索キャッシュをリセットしました（次回は再検索します）")
+
      
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
@@ -925,6 +982,7 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
+                ensure_daily_gpt_search(client, search_query)
                 # 再実行：前回出力を全消し（UIも session_state も）
                 comp["step1"] = None
                 comp["step2"] = None
@@ -995,6 +1053,7 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
+                ensure_daily_gpt_search(client, search_query)
                 # 機能2は押したら前回表示（その馬のUI）を一旦消す
                 ph_h.empty()
                 ph_j.empty()
@@ -1058,6 +1117,7 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
+                ensure_daily_gpt_search(client, search_query)
                 # 再実行：前回出力を全消し（UIも session_state も）
                 sign["events"] = None
                 sign["numbers"] = None
