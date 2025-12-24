@@ -9,6 +9,8 @@ from openai import OpenAI
 import os
 import html
 import time
+import requests
+from typing import List, Dict
 
 # ============================================
 # ページ設定
@@ -29,6 +31,9 @@ if "eval_results" not in st.session_state:
     st.session_state["eval_results"] = {}
 if "sign_results" not in st.session_state:
     st.session_state["sign_results"] = {"events": None, "numbers": None, "bet": None}
+if "search_results" not in st.session_state:
+    st.session_state["search_results"] = None
+
 
 # ============================================
 # 表示ヘルパー（白文字問題の根本対策）
@@ -338,6 +343,38 @@ EVENTS_2025_STR = """【2025年の主な出来事】
    - 内容: 第64作目の大河ドラマ
    - 関連数字: 64 (第64作), 1 (1月放送開始)
 """
+
+# ============================================
+# Web検索機能
+# ============================================
+def google_search(query: str, num: int = 5) -> List[Dict[str, str]]:
+    api_key = st.secrets.get("GOOGLE_CSE_API_KEY", os.environ.get("GOOGLE_CSE_API_KEY"))
+    cx = st.secrets.get("GOOGLE_CSE_CX", os.environ.get("GOOGLE_CSE_CX"))
+    if not api_key or not cx:
+        raise RuntimeError("GOOGLE_CSE_API_KEY / GOOGLE_CSE_CX が未設定です")
+
+    url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "key": api_key,
+        "cx": cx,
+        "q": query,
+        "num": max(1, min(num, 10)),
+        "hl": "ja",
+        "gl": "jp",
+    }
+    r = requests.get(url, params=params, timeout=20)
+    r.raise_for_status()
+    data = r.json()
+
+    results = []
+    for it in data.get("items", []):
+        results.append({
+            "title": it.get("title", ""),
+            "link": it.get("link", ""),
+            "snippet": it.get("snippet", ""),
+        })
+    return results
+
 
 # ============================================
 # 機能①: 総合予想（3段階）
@@ -849,6 +886,19 @@ def main():
         for num, info in HORSE_LIST_2025.items():
             st.markdown(f"**{info['馬名']}** ({info['騎手']})")
 
+        st.markdown("---")
+        st.markdown("### 🔎 Web検索（Google）")
+
+        q = st.text_input("検索クエリ", value="2025 有馬記念 枠順")
+        do_search = st.button("検索", use_container_width=True)
+
+        if do_search:
+            try:
+                st.session_state["search_results"] = google_search(q, num=5)
+                st.success("✅ 検索結果を search_results に格納しました")
+            except Exception as e:
+                st.error(f"検索に失敗: {e}")
+                
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
     # =========================
