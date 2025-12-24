@@ -451,21 +451,28 @@ def gpt_web_search(client, prompt: str) -> str:
 
 def ensure_daily_gpt_search(client, query: str) -> str:
     if client is None:
+        st.session_state["search_error"] = "client is None"
         return None
 
     today = datetime.now(JST).date().isoformat()
 
-    # 今日の分があれば再利用
+    # すでに今日の分があれば再利用
     if st.session_state.get("search_date_jst") == today and st.session_state.get("search_results"):
         return st.session_state["search_results"]
 
-    # 今日の分がなければ実行（gpt_web_searchは str を返す前提）
-    text = gpt_web_search(client, query)  # ← textは str
-
-    st.session_state["search_results"] = text
-    st.session_state["search_date_jst"] = today
-    return text
-
+    try:
+        text = gpt_web_search(client, query)  # str想定
+        if not text or not str(text).strip():
+            raise RuntimeError("web_search returned empty text")
+        st.session_state["search_results"] = str(text)
+        st.session_state["search_date_jst"] = today
+        st.session_state["search_error"] = None
+        return st.session_state["search_results"]
+    except Exception as e:
+        st.session_state["search_error"] = repr(e)
+        st.session_state["search_results"] = None
+        st.session_state["search_date_jst"] = None
+        return None
 
 # ============================================
 # 機能①: 総合予想（3段階）
@@ -1006,25 +1013,25 @@ def main():
     with st.sidebar:
         st.markdown("### ⚙️ 設定")
     
-        st.markdown("---")
         if st.button("🔄 今日の検索をリセット", use_container_width=True):
             st.session_state["search_date_jst"] = None
             st.session_state["search_results"] = None
+            st.session_state["search_error"] = None
             st.success("検索キャッシュをリセットしました（次回は再検索します）")
-
-        st.markdown("### 🔍 Web検索結果（当日キャッシュ）")
+    
+        st.markdown("---")
+        st.markdown("### 🔎 Web検索結果（当日キャッシュ）")
+    
+        # ★デバッグ（必ず出す）
+        st.caption(f"date={st.session_state.get('search_date_jst')}")
+        st.caption(f"has_results={bool(st.session_state.get('search_results'))}")
+        st.caption(f"error={st.session_state.get('search_error')}")
     
         if st.session_state.get("search_results"):
-            st.markdown(
-                render_box(
-                    "検索結果",
-                    st.session_state["search_results"],
-                    "analysis-box"
-                ),
-                unsafe_allow_html=True
-            )
+            st.markdown(render_box("Web検索結果", st.session_state["search_results"], "analysis-box"),
+                        unsafe_allow_html=True)
         else:
-            st.caption("まだWeb検索は実行されていません")
+            st.info("まだWeb検索は実行されていません")
  
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
