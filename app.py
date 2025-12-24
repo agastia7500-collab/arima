@@ -31,9 +31,10 @@ if "eval_results" not in st.session_state:
     st.session_state["eval_results"] = {}
 if "sign_results" not in st.session_state:
     st.session_state["sign_results"] = {"events": None, "numbers": None, "bet": None}
+if "search_raw" not in st.session_state:
+    st.session_state["search_raw"] = None
 if "search_results" not in st.session_state:
     st.session_state["search_results"] = None
-
 
 # ============================================
 # 表示ヘルパー（白文字問題の根本対策）
@@ -404,7 +405,7 @@ def summarize_search_with_llm(client, search_text: str) -> str:
             {"role": "user", "content": search_text}
         ],
         temperature=0.2,
-        max_tokens=800,
+        max_tokens=3000,
     )
     return r.choices[0].message.content
 
@@ -926,17 +927,21 @@ def main():
 
         if do_search:
             try:
-                st.session_state["search_results"] = google_search(q, num=5)
-                raw_results = google_search(q, num=5)
-                search_text = format_search_results(raw_results)
+                raw = google_search(q, num=5)
+                st.session_state["search_raw"] = raw   # ← raw を保存
 
+                search_text = format_search_results(raw)
                 llm_result = summarize_search_with_llm(client, search_text)
 
                 st.session_state["search_results"] = llm_result
-
-                st.success("✅ 検索結果を search_results に格納しました")
+                st.success("✅ raw / LLM後 の両方を保存しました")
             except Exception as e:
                 st.error(f"検索に失敗: {e}")
+
+        # 検索結果 (raw) を表示
+        if st.session_state.get("search_raw"):
+           st.markdown("### 🔍 Web検索結果（RAW）")
+           st.json(st.session_state["search_raw"])
 
         # 検索結果（LLM後）を表示
         if st.session_state.get("search_results"):
