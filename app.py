@@ -980,6 +980,12 @@ def main():
 
     client = get_openai_client()
 
+    data = load_race_data()
+
+    if data is None:
+        st.error("❌ data/arima_data.xlsx の読み込みに失敗しました")
+        st.stop()
+
     # サイドバー
     with st.sidebar:
         st.markdown("### ⚙️ 設定")
