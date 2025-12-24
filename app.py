@@ -375,6 +375,21 @@ def google_search(query: str, num: int = 5) -> List[Dict[str, str]]:
         })
     return results
 
+def format_search_results(results):
+    """
+    Google検索結果（list[dict]）を LLMに渡すテキストへ変換
+    """
+    if not results:
+        return "検索結果なし"
+
+    lines = []
+    for i, r in enumerate(results, 1):
+        title = r.get("title", "")
+        link = r.get("link", "")
+        snippet = r.get("snippet", "")
+        lines.append(f"[{i}] {title}\nURL: {link}\nSNIP: {snippet}\n")
+    return "\n".join(lines).strip()
+
 def summarize_search_with_llm(client, search_text: str) -> str:
     system_prompt = """
 あなたは競馬情報整理アシスタントです。
