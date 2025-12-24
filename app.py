@@ -904,47 +904,12 @@ def main():
     with st.sidebar:
         st.markdown("### ⚙️ 設定")
         uploaded_file = st.file_uploader("📁 予想データ", type=["xlsx", "xls"])
-        
-        st.markdown("---")
-        st.markdown("### 🔎 Web検索（GPT）")
-        
-        q = st.text_input("検索クエリ", value="2025 有馬記念 枠順 騎手 出走馬")
-        do_search = st.button("検索（GPT）", use_container_width=True)
-        
-        if do_search:
-            if client is None:
-                st.error("APIキーを設定してください")
-            else:
-                try:
-                    resp = gpt_web_search(client, q)  # ← あなたが追加済みの関数（respを返す想定）
-        
-                    # 保存：LLM後（読む用）
-                    st.session_state["search_results"] = getattr(resp, "output_text", None) or str(resp)
-        
-                    # 保存：raw（デバッグ用） - 可能ならdict化して保存
-                    try:
-                        st.session_state["search_raw"] = resp.model_dump()
-                    except Exception:
-                        # model_dumpできないSDK/型の場合の保険
-                        st.session_state["search_raw"] = {"repr": repr(resp), "str": str(resp)}
-        
-                    st.success("✅ 検索結果を保存しました（raw / LLM後）")
-                except Exception as e:
-                    st.error(f"検索に失敗: {e}")
-                
-        # ---- 表示----
-        if st.session_state.get("search_results"):
-            st.markdown(
-                render_box("検索結果", st.session_state["search_results"], "analysis-box"),
-                unsafe_allow_html=True
-            )
 
         st.markdown("---")
         if st.button("🔄 今日の検索をリセット", use_container_width=True):
             st.session_state["search_date_jst"] = None
             st.session_state["search_results"] = None
             st.success("検索キャッシュをリセットしました（次回は再検索します）")
-
      
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
