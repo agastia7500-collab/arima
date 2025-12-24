@@ -538,7 +538,7 @@ def analyze_horse(client, horse_info, data):
 
 ## 出力形式
 【馬単体評価】
-・総合評価：★☆☆☆☆（5=、3=、1=）
+・総合評価：★☆☆☆☆
 ・評価：2-3文
 　・血統評価：1文
 　・年齢評価：1文
@@ -580,7 +580,7 @@ def analyze_jockey(client, horse_info, data):
 
 ## 出力形式
 【騎手評価】
-・総合評価：★☆☆☆☆（5=、3= 、1=）
+・総合評価：★☆☆☆☆
 ・評価：2-3文"""
     r = client.chat.completions.create(
         model="gpt-4o",
