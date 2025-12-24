@@ -214,60 +214,60 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-/* 1) ヘッダー/ツールバーが背面に回っているとトグルも消えるので最前面化 */
-[data-testid="stHeader"],
-header,
-.stApp > header {
-  z-index: 999998 !important;
-  position: relative !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
+# st.markdown("""
+# <style>
+# /* 1) ヘッダー/ツールバーが背面に回っているとトグルも消えるので最前面化 */
+# [data-testid="stHeader"],
+# header,
+# .stApp > header {
+#   z-index: 999998 !important;
+#   position: relative !important;
+#   display: block !important;
+#   visibility: visible !important;
+#   opacity: 1 !important;
+# }
 
-/* 2) サイドバー開閉トグル（旧/新の両方を想定して全部拾う） */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="stSidebarCollapseButton"],
-button[aria-label="Close sidebar"],
-button[aria-label="Open sidebar"]{
-  display: inline-flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  z-index: 999999 !important;
-}
+# /* 2) サイドバー開閉トグル（旧/新の両方を想定して全部拾う） */
+# [data-testid="collapsedControl"],
+# [data-testid="stSidebarCollapsedControl"],
+# [data-testid="stSidebarCollapseButton"],
+# button[aria-label="Close sidebar"],
+# button[aria-label="Open sidebar"]{
+#   display: inline-flex !important;
+#   visibility: visible !important;
+#   opacity: 1 !important;
+#   pointer-events: auto !important;
+#   z-index: 999999 !important;
+# }
 
-/* 3) トグルが背景に埋もれる問題が多いので固定配置で強制表示 */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"]{
-  position: fixed !important;
-  top: 0.75rem !important;
-  left: 0.75rem !important;
-}
+# /* 3) トグルが背景に埋もれる問題が多いので固定配置で強制表示 */
+# [data-testid="collapsedControl"],
+# [data-testid="stSidebarCollapsedControl"]{
+#   position: fixed !important;
+#   top: 0.75rem !important;
+#   left: 0.75rem !important;
+# }
 
-/* 4) ボタンが“見えてるのに見えない”対策（色/背景/影） */
-[data-testid="collapsedControl"] *,
-[data-testid="stSidebarCollapsedControl"] *,
-[data-testid="stSidebarCollapseButton"] *,
-button[aria-label="Close sidebar"] *,
-button[aria-label="Open sidebar"] *{
-  color: #ffffff !important;
-}
+# /* 4) ボタンが“見えてるのに見えない”対策（色/背景/影） */
+# [data-testid="collapsedControl"] *,
+# [data-testid="stSidebarCollapsedControl"] *,
+# [data-testid="stSidebarCollapseButton"] *,
+# button[aria-label="Close sidebar"] *,
+# button[aria-label="Open sidebar"] *{
+#   color: #ffffff !important;
+# }
 
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="stSidebarCollapseButton"],
-button[aria-label="Close sidebar"],
-button[aria-label="Open sidebar"]{
-  background: rgba(0,0,0,0.35) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.35) !important;
-}
-</style>
-""", unsafe_allow_html=True)
+# [data-testid="collapsedControl"],
+# [data-testid="stSidebarCollapsedControl"],
+# [data-testid="stSidebarCollapseButton"],
+# button[aria-label="Close sidebar"],
+# button[aria-label="Open sidebar"]{
+#   background: rgba(0,0,0,0.35) !important;
+#   border-radius: 10px !important;
+#   box-shadow: 0 4px 14px rgba(0,0,0,0.35) !important;
+# }
+# </style>
+# """, unsafe_allow_html=True)
 
 
 
@@ -467,6 +467,7 @@ def ensure_daily_gpt_search(client, query: str) -> str:
 # 機能①: 総合予想（3段階）
 # ============================================
 def analyze_data_summary(client, data):
+    search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
     system_prompt = """
 ## 指示
 あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
@@ -545,6 +546,7 @@ def analyze_data_summary(client, data):
     return r.choices[0].message.content
 
 def predict_horses(client, data, analysis):
+    search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
     system_prompt = f"""
 ## 指示
 あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
@@ -620,6 +622,7 @@ F. 当日要素
     return r.choices[0].message.content
 
 def suggest_betting(client, prediction):
+    search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
     system_prompt = """
 ## 指示
 あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
@@ -652,6 +655,7 @@ def suggest_betting(client, prediction):
 # 機能②: 単体評価（4段階）
 # ============================================
 def analyze_horse(client, horse_info, data):
+    search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
     system_prompt = f"""
 ## 指示
 あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
@@ -704,6 +708,7 @@ def analyze_horse(client, horse_info, data):
     return r.choices[0].message.content
 
 def analyze_jockey(client, horse_info, data):
+    search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
     system_prompt = f"""
 ## 指示
 あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
@@ -747,6 +752,7 @@ def analyze_jockey(client, horse_info, data):
     return r.choices[0].message.content
 
 def analyze_course(client, horse_info, data):
+    search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
     system_prompt = f"""
 ## 指示
 あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
@@ -810,6 +816,7 @@ def analyze_course(client, horse_info, data):
     return r.choices[0].message.content
 
 def analyze_total(client, horse_info, h_res, j_res, c_res):
+    search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
     system_prompt = f"""
 ## 指示
 あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
