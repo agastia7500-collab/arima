@@ -214,6 +214,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+/* selectbox のラベル文字を白くする */
+label[data-testid="stWidgetLabel"] {
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
 # st.markdown("""
 # <style>
 # /* 1) ヘッダー/ツールバーが背面に回っているとトグルも消えるので最前面化 */
@@ -1039,6 +1045,8 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
+                ph1.info("📊 分析中...")
+                
                 ensure_daily_gpt_search(client, search_query)
                 # 再実行：前回出力を全消し（UIも session_state も）
                 comp["step1"] = None
@@ -1048,7 +1056,6 @@ def main():
                 ph2.empty()
                 ph3.empty()
 
-                ph1.info("📊 分析中...")
                 comp["step1"] = analyze_data_summary(client, data)
                 ph1.markdown(render_box("📊 データ傾向", comp["step1"], "result-box"), unsafe_allow_html=True)
 
@@ -1110,6 +1117,8 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
+                ph_h.info("分析中...")
+                
                 ensure_daily_gpt_search(client, search_query)
                 # 機能2は押したら前回表示（その馬のUI）を一旦消す
                 ph_h.empty()
@@ -1117,7 +1126,6 @@ def main():
                 ph_c.empty()
                 ph_t.empty()
 
-                ph_h.info("分析中...")
                 h_res = analyze_horse(client, horse_info, data)
                 ph_h.markdown(render_box("🐴 馬分析", h_res, "analysis-box box-horse"), unsafe_allow_html=True)
 
@@ -1174,6 +1182,8 @@ def main():
             if client is None:
                 st.error("APIキーを設定してください")
             else:
+                ph_e.info("収集中...")
+                
                 ensure_daily_gpt_search(client, search_query)
                 # 再実行：前回出力を全消し（UIも session_state も）
                 sign["events"] = None
@@ -1183,7 +1193,6 @@ def main():
                 ph_n.empty()
                 ph_b.empty()
 
-                ph_e.info("収集中...")
                 e_res = get_events_2025(client)
                 sign["events"] = e_res
                 ph_e.markdown(render_box("📅 2025年の出来事", e_res, "analysis-box box-events"), unsafe_allow_html=True)
