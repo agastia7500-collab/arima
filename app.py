@@ -237,64 +237,6 @@ label[data-testid="stWidgetLabel"] {
 </style>
 """, unsafe_allow_html=True)
 
-
-# st.markdown("""
-# <style>
-# /* 1) ヘッダー/ツールバーが背面に回っているとトグルも消えるので最前面化 */
-# [data-testid="stHeader"],
-# header,
-# .stApp > header {
-#   z-index: 999998 !important;
-#   position: relative !important;
-#   display: block !important;
-#   visibility: visible !important;
-#   opacity: 1 !important;
-# }
-
-# /* 2) サイドバー開閉トグル（旧/新の両方を想定して全部拾う） */
-# [data-testid="collapsedControl"],
-# [data-testid="stSidebarCollapsedControl"],
-# [data-testid="stSidebarCollapseButton"],
-# button[aria-label="Close sidebar"],
-# button[aria-label="Open sidebar"]{
-#   display: inline-flex !important;
-#   visibility: visible !important;
-#   opacity: 1 !important;
-#   pointer-events: auto !important;
-#   z-index: 999999 !important;
-# }
-
-# /* 3) トグルが背景に埋もれる問題が多いので固定配置で強制表示 */
-# [data-testid="collapsedControl"],
-# [data-testid="stSidebarCollapsedControl"]{
-#   position: fixed !important;
-#   top: 0.75rem !important;
-#   left: 0.75rem !important;
-# }
-
-# /* 4) ボタンが“見えてるのに見えない”対策（色/背景/影） */
-# [data-testid="collapsedControl"] *,
-# [data-testid="stSidebarCollapsedControl"] *,
-# [data-testid="stSidebarCollapseButton"] *,
-# button[aria-label="Close sidebar"] *,
-# button[aria-label="Open sidebar"] *{
-#   color: #ffffff !important;
-# }
-
-# [data-testid="collapsedControl"],
-# [data-testid="stSidebarCollapsedControl"],
-# [data-testid="stSidebarCollapseButton"],
-# button[aria-label="Close sidebar"],
-# button[aria-label="Open sidebar"]{
-#   background: rgba(0,0,0,0.35) !important;
-#   border-radius: 10px !important;
-#   box-shadow: 0 4px 14px rgba(0,0,0,0.35) !important;
-# }
-# </style>
-# """, unsafe_allow_html=True)
-
-
-
 # ============================================
 # OpenAI クライアント
 # ============================================
@@ -457,7 +399,7 @@ search_query = """
 # ============================================
 def gpt_web_search(client, prompt: str) -> str:
     response = client.responses.create(
-        model="gpt-4.1",
+        model="gpt-5-mini",
         tools=[{"type": "web_search"}],
         input=prompt,              # ← search_query をそのまま入れる
         max_output_tokens=3000,     # 出力量制御
@@ -488,6 +430,33 @@ def ensure_daily_gpt_search(client, query: str) -> str:
         st.session_state["search_results"] = None
         st.session_state["search_date_jst"] = None
         return None
+
+# ============================================
+# 共通: Responses API で gpt-5-mini を呼ぶラッパー
+# ============================================
+def _call_gpt5mini_responses(client, system_prompt: str, user_content: str,
+                            max_output_tokens: int,
+                            temperature: float = None) -> str:
+    """
+    gpt-5-mini を Responses API で呼び、テキストを返す。
+    プロンプト（system/user）はそのまま。max_tokens -> max_output_tokens に読み替え。
+    互換性のため temperature は指定された場合のみ渡す（未対応環境を避ける）。
+    """
+    kwargs = {}
+    if temperature is not None:
+        kwargs["temperature"] = temperature  # 環境によっては無視/非対応の可能性あり
+
+    r = client.responses.create(
+        model="gpt-5-mini",
+        input=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ],
+        max_output_tokens=max_output_tokens,
+        **kwargs
+    )
+    return r.output_text
+
 
 # ============================================
 # 機能①: 総合予想（3段階）
@@ -564,13 +533,15 @@ def analyze_data_summary(client, data):
 ## WEB検索結果
 {search_results}
  """
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content": f"データ分析:\n{format_data_for_prompt(data)}"}],
-        temperature=0.5, max_tokens=1000
+    user_content = f"データ分析:\n{format_data_for_prompt(data)}"
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.5,
+        max_output_tokens=1000
     )
-    return r.choices[0].message.content
+
 
 def predict_horses(client, data, analysis):
     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
@@ -641,13 +612,15 @@ F. 当日要素
 ## WEB検索結果
 {search_results}
 """
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content": f"【分析結果】\n{analysis}"}],
-        temperature=0.7, max_tokens=1500
+    user_content = f"【分析結果】\n{analysis}"
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.7,
+        max_output_tokens=1500
     )
-    return r.choices[0].message.content
+
 
 def suggest_betting(client, prediction):
     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
@@ -677,13 +650,15 @@ def suggest_betting(client, prediction):
 ## WEB検索結果
 {search_results}
 """
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content": f"予想:\n{prediction}"}],
-        temperature=0.6, max_tokens=1000
+    user_content = f"予想:\n{prediction}"
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.6,
+        max_output_tokens=1000
     )
-    return r.choices[0].message.content
+
 
 # ============================================
 # 機能②: 単体評価（4段階）
@@ -729,18 +704,20 @@ def analyze_horse(client, horse_info, data):
 ・血統評価：(1文で記載)
 ・年齢評価：(1文で記載)
 ・前走結果評価：(1文で記載)"""
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content":
-                  f"馬名:{horse_info['馬名']} "
-                  f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']} "
-                  f"性齢:{horse_info['性齢']} 血統:{horse_info['血統']} 前走:{horse_info['前走']}\n"
-                  f"{format_data_for_prompt(data)}"}
-        ],
-        temperature=0.6, max_tokens=800
+    user_content = (
+        f"馬名:{horse_info['馬名']} "
+        f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']} "
+        f"性齢:{horse_info['性齢']} 血統:{horse_info['血統']} 前走:{horse_info['前走']}\n"
+        f"{format_data_for_prompt(data)}"
     )
-    return r.choices[0].message.content
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.6,
+        max_output_tokens=800
+    )
+
 
 def analyze_jockey(client, horse_info, data):
     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
@@ -774,18 +751,20 @@ def analyze_jockey(client, horse_info, data):
 ☆☆☆☆☆
 【コメント】
 (2-3文で記載)"""
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content":
-                  f"騎手:{horse_info['騎手']} "
-                  f"騎乗馬:{horse_info['馬名']} "
-                  f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']}\n"
-                  f"{format_data_for_prompt(data)}"}
-        ],
-        temperature=0.6, max_tokens=800
+    user_content = (
+        f"騎手:{horse_info['騎手']} "
+        f"騎乗馬:{horse_info['馬名']} "
+        f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']}\n"
+        f"{format_data_for_prompt(data)}"
     )
-    return r.choices[0].message.content
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.6,
+        max_output_tokens=800
+    )
+
 
 def analyze_course(client, horse_info, data):
     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
@@ -839,18 +818,20 @@ def analyze_course(client, horse_info, data):
 ・枠順：(1文で記載)
 ・距離適性：(1文で記載)
 ・展開予想：(1文で記載)"""
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content":
-                  f"馬名:{horse_info['馬名']} "
-                  f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']} "
-                  f"前走:{horse_info['前走']}\n"
-                  f"{format_data_for_prompt(data)}"}
-        ],
-        temperature=0.6, max_tokens=800
+    user_content = (
+        f"馬名:{horse_info['馬名']} "
+        f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']} "
+        f"前走:{horse_info['前走']}\n"
+        f"{format_data_for_prompt(data)}"
     )
-    return r.choices[0].message.content
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.6,
+        max_output_tokens=800
+    )
+
 
 def analyze_total(client, horse_info, h_res, j_res, c_res):
     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
@@ -897,18 +878,20 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
 
 【一言】  
 (判断を象徴する短いフレーズを記載)"""
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content":
-                  f"【枠{horse_info['枠番']}・馬{horse_info['馬番']} {horse_info['馬名']}】\n"
-                  f"馬分析:{h_res}\n"
-                  f"騎手分析:{j_res}\n"
-                  f"コース分析:{c_res}"}
-        ],
-        temperature=0.6, max_tokens=800
+    user_content = (
+        f"【枠{horse_info['枠番']}・馬{horse_info['馬番']} {horse_info['馬名']}】\n"
+        f"馬分析:{h_res}\n"
+        f"騎手分析:{j_res}\n"
+        f"コース分析:{c_res}"
     )
-    return r.choices[0].message.content
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.6,
+        max_output_tokens=800
+    )
+
 
 # ============================================
 # 機能③: サイン理論（3段階）
@@ -916,6 +899,7 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
 def get_events_2025(client):
     time.sleep(5)
     return EVENTS_2025_STR
+
 
 def extract_numbers(client, events):
     system_prompt = f"""
@@ -961,13 +945,15 @@ def extract_numbers(client, events):
 
     ## 出走馬情報
    {HORSE_INFO_STR_2025}"""
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content": f"出来事:\n{events}"}],
-        temperature=0.5, max_tokens=3000
+    user_content = f"出来事:\n{events}"
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.5,
+        max_output_tokens=3000
     )
-    return r.choices[0].message.content
+
 
 def sign_betting(client, events, numbers):
     system_prompt = f"""
@@ -1011,13 +997,545 @@ def sign_betting(client, events, numbers):
     
     ## 出走馬情報
    {HORSE_INFO_STR_2025}"""
-    r = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": system_prompt},
-                  {"role": "user", "content": f"出来事:\n{events}\n考察:\n{numbers}"}],
-        temperature=0.5, max_tokens=3000
+    user_content = f"出来事:\n{events}\n考察:\n{numbers}"
+    return _call_gpt5mini_responses(
+        client,
+        system_prompt=system_prompt,
+        user_content=user_content,
+        temperature=0.5,
+        max_output_tokens=3000
     )
-    return r.choices[0].message.content
+
+
+# # ============================================
+# # 機能①: 総合予想（3段階）
+# # ============================================
+# def analyze_data_summary(client, data):
+#     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
+#     system_prompt = """
+# ## 指示
+# あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
+# 過去の有馬記念データとWEB一次情報をもとに傾向を分析してください。
+# 出力に「*」や「#」を含まないでください。
+
+# ## 使用すべき情報源
+# - JRA/主催者、公式出走表・公式結果、信頼できる出走データベース（事実情報）
+# - 参照データ
+
+# ## 参照データ
+# ファイル名：有馬記念過去データ
+# 　- 年齢：年齢×着順割合
+# 　- 枠順：枠番×着順割合
+# 　- 騎手：騎手別着順割合
+# 　- 血統：種牡馬別の有馬記念着順割合
+# 　- 前走レース別：前走レース別の着順割合
+# 　- 馬体重増減：増減幅区分×着順割合
+
+# ## 傾向分析フロー
+# ### STEP1 レースの見立て整理
+# 逃げ・先行馬の頭数と脚質分布から、
+# レース全体のペースを以下3段階で判定する。
+# ここで構築した内容は、会話中にブレさせないようにすること。
+
+# - S（スロー）
+# - M（ミドル）
+# - H（ハイ）
+# ※ペース判定の根拠を1行で示す。
+
+# ### STEP2 過去データ傾向
+# 以下を個別評価し傾向を出力する  
+# 　・年齢  
+# 　・枠順  
+# 　・前走レース  
+# 　・血統  
+# 　・騎手  
+# 　・馬体重
+# 　・コース形態（小回り・コーナー数・坂）
+# ・求められる能力（スタミナ・器用さ・持続力）
+# ・不利になりやすいタイプ
+
+# ## 出力形式
+# 【レース全体のペース傾向】
+# (内容を簡潔に記載)
+# 【年齢】
+# (○○歳の馬が好走しやすい傾向といった内容を簡潔に記載)
+# 【枠順】  
+# (～～という傾向といった形式で内容を簡潔に記載)
+# 【前走レース】
+# (～～という傾向といった形式で内容を簡潔に記載)
+# 【血統】
+# (～～という傾向といった形式で内容を簡潔に記載)
+# 【騎手】
+# (～～という傾向といった形式で内容を簡潔に記載)
+# 【馬体重】
+# (～～という傾向といった形式で内容を簡潔に記載)
+# 【コース形態】
+# (内容を簡潔に記載)
+# 【求められる能力】
+# (内容を簡潔に記載)
+# 【不利になりやすいタイプ】
+# (内容を簡潔に記載)
+
+# ## 出走馬情報
+# {HORSE_INFO_STR_2025}
+
+# ## WEB検索結果
+# {search_results}
+#  """
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content": f"データ分析:\n{format_data_for_prompt(data)}"}],
+#         temperature=0.5, max_tokens=1000
+#     )
+#     return r.choices[0].message.content
+
+# def predict_horses(client, data, analysis):
+#     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
+#     system_prompt = f"""
+# ## 指示
+# あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
+# コース傾向・過去の有馬記念データ・当日のWEB一次情報・展開分析を統合して、
+# 競馬初心者でも納得しながら意思決定できる形で推奨馬を提示してください。
+# 出力に「*」や「#」を含まないでください。
+
+# ### 使用すべき情報源
+# - JRA/主催者、公式出走表・公式結果、信頼できる出走データベース（事実情報）
+# - 有馬記念のコース傾向
+
+# ### 避けるべき情報/予想方法
+# - 予想記事の印、回顧記事の主観評価、SNSの推測、オッズだけでの結論
+
+# ## 分析フロー
+# ### STEP1 出走馬評価
+# 全出走馬を以下6指標で **0〜5点** で採点し、合計点を算出する。
+
+# A. コース適性  
+# 　中山実績・小回り・坂への対応力
+
+# B. 距離適性  
+# 　2200〜2600mでの内容（着順よりレース内容重視）
+
+# C. 展開適性  
+# 　想定ペース × 脚質の相性
+
+# D. 近走内容  
+# 　位置取り・上がり・持続力・不利の有無を評価
+
+# E. 過去データ適合（統合評価）  
+# 　以下を内部で個別評価し、統合して点数化する  
+# 　・年齢  
+# 　・枠順  
+# 　・前走レース  
+# 　・血統  
+# 　・騎手  
+# ※出力時は「どの要素が一致したか」を必ず明示する
+
+# F. 当日要素  
+# 　馬体重増減・パドック・馬場状態  
+# ※不明な項目は0点扱い
+
+# ### STEP2  リスク評価
+# 合計点に加え、以下のようなリスク要因を考慮して最終評価を確定する。
+
+# - 距離不安
+# - 折り合い不安
+# - 当日状態の悪化
+# - 展開不利
+
+# ## 出力形式
+# ◎本命（理由）
+# ○対抗（理由）
+# ▲単穴（理由）
+# ☆穴馬（理由）
+# ✕危険馬（理由）
+
+# ## 禁止事項
+# ・人気順のみでの評価
+
+# ## 出走馬情報
+# {HORSE_INFO_STR_2025}
+
+# ## WEB検索結果
+# {search_results}
+# """
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content": f"【分析結果】\n{analysis}"}],
+#         temperature=0.7, max_tokens=1500
+#     )
+#     return r.choices[0].message.content
+
+# def suggest_betting(client, prediction):
+#     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
+#     system_prompt = """
+# ## 指示
+# あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
+# 推奨馬の印をもとに買い目を提示してください。
+# 出力に「*」や「#」を含まないでください。
+
+# ### 使用してよい情報源
+# - 推奨馬印
+
+# ## 出力形式
+# 【馬連】
+# (最大3点で馬連の買い目を記載)
+# 【三連複】
+# (最大6点で三連複の買い目を記載)
+# 【資金配分】
+# ＜安全型＞
+# (安全型の資金配分を記載)
+# ＜攻め型＞
+# (攻め型の資金配分を記載)
+
+# ## 出走馬情報
+# {HORSE_INFO_STR_2025}
+
+# ## WEB検索結果
+# {search_results}
+# """
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content": f"予想:\n{prediction}"}],
+#         temperature=0.6, max_tokens=1000
+#     )
+#     return r.choices[0].message.content
+
+# # ============================================
+# # 機能②: 単体評価（4段階）
+# # ============================================
+# def analyze_horse(client, horse_info, data):
+#     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
+#     system_prompt = f"""
+# ## 指示
+# あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
+# ユーザーが指定した「出走馬1頭」について、馬単体の能力を評価してください。
+# 出力に「*」や「#」を含まないでください。
+
+# ## 評価項目
+# ・ 血統評価  
+# 　- 種牡馬の有馬記念着順割合を参照
+# 　- 好走傾向の強弱を評価
+# 　- 有馬記念向き血統かどうかを判断
+
+# ・ 年齢評価  
+# 　- 年齢別の有馬記念着順割合を参照
+# 　- 好走ゾーン・不振ゾーンとの一致度を評価
+
+# ・ 前走結果評価
+# 　- 前走レース別の有馬記念着順割合を参照
+# 　- 有馬記念に繋がりやすいローテ・成績かを評価
+
+# ## WEB検索結果
+# {search_results}
+
+# ## ★評価の内部目安（非出力）
+# ★★★★★：有馬記念の負荷条件でも能力低下がほぼ見られない
+# ★★★★☆：高負荷下でも一定水準を維持できる
+# ★★★☆☆：能力はあるが、消耗や展開でブレが出る
+# ★★☆☆☆：地力は高いが、有馬条件では割引が必要
+# ★☆☆☆☆：能力評価以前に条件的に厳しい 
+# ※この基準は内部判断用であり、説明文には直接書かないこと。
+
+# ## 出力形式
+# 【評価】
+# ☆☆☆☆☆
+# 【コメント】
+# (2-3文で記載)
+# ・血統評価：(1文で記載)
+# ・年齢評価：(1文で記載)
+# ・前走結果評価：(1文で記載)"""
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content":
+#                   f"馬名:{horse_info['馬名']} "
+#                   f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']} "
+#                   f"性齢:{horse_info['性齢']} 血統:{horse_info['血統']} 前走:{horse_info['前走']}\n"
+#                   f"{format_data_for_prompt(data)}"}
+#         ],
+#         temperature=0.6, max_tokens=800
+#     )
+#     return r.choices[0].message.content
+
+# def analyze_jockey(client, horse_info, data):
+#     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
+#     system_prompt = f"""
+# ## 指示
+# あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
+# ユーザーが指定した「出走馬1頭」について、騎乗する騎手単体の評価を行ってください。
+# 出力に「*」や「#」を含まないでください。
+# ※本評価は、実施済の「馬単体評価」後続の「コース適性評価」と
+# 　統合される前提のため、評価基準・結論をブレさせないこと。
+
+# ## 評価項目
+# 騎手別の有馬記念着順割合を参照し、以下3区分で内部判定する 
+# ・好走傾向  
+# ・平均的  
+# ・不振傾向  
+
+# ## WEB検索結果
+# {search_results}
+
+# ## ★評価の内部目安（非出力）
+# ★★★★★：好走傾向が非常に強く、凡走が少ない  
+# ★★★★☆：好走傾向があり、安定感のある水準  
+# ★★★☆☆：平均的水準  
+# ★★☆☆☆：好走例はあるが、安定感に欠ける  
+# ★☆☆☆☆：明確に不振傾向  
+# ※この基準は内部判断用であり、説明文には直接書かないこと。
+
+# ## 出力形式
+# 【評価】
+# ☆☆☆☆☆
+# 【コメント】
+# (2-3文で記載)"""
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content":
+#                   f"騎手:{horse_info['騎手']} "
+#                   f"騎乗馬:{horse_info['馬名']} "
+#                   f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']}\n"
+#                   f"{format_data_for_prompt(data)}"}
+#         ],
+#         temperature=0.6, max_tokens=800
+#     )
+#     return r.choices[0].message.content
+
+# def analyze_course(client, horse_info, data):
+#     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
+#     system_prompt = f"""
+# ## 指示
+# あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
+# ユーザーが指定した「出走馬1頭」について、有馬記念のコース適性を評価してください。
+# 出力に「*」や「#」を含まないでください。
+
+# ※本評価は、これまでに実施した  
+# - 馬単体評価
+# - 騎手評価  
+# の後続に位置づく評価であり、最終的な「総評」と統合される前提です。  
+# 評価基準や結論をブレさせず、整合性を重視してください。
+
+# ## 前提ルール
+# - 傾向分析プロンプトで確定させた
+# 　・想定ペース（S/M/H）
+# 　・有馬記念のコース特性
+# 　・不利になりやすいタイプ
+# 　を前提条件として評価すること
+
+# ## 評価項目
+# ・枠順
+# 　- 枠番別の有馬記念着順割合を参照
+# 　- 当該枠が有利・不利どちらの傾向かを評価
+
+# ・距離適性  
+# 　- 前走レース別の有馬記念好走傾向を参照
+# 　- 前走ローテーションが中山芝2500mに繋がりやすい距離帯かを評価
+
+# ・展開予想
+# 　- 想定ペース（S/M/H）を前提とし当該馬の脚質タイプが有馬記念で有利・不利になりやすいかを評価
+
+# ## WEB検索結果
+# {search_results}
+
+# ## ★評価の内部目安（非出力）
+# ★★★★★：コース形態・距離・馬場傾向に非常に噛み合う  
+# ★★★★☆：有馬記念の舞台条件に適性が高い  
+# ★★★☆☆：適性面で可もなく不可もない  
+# ★★☆☆☆：舞台条件とややズレがあり、割引が必要  
+# ★☆☆☆☆：舞台条件との不適合が大きい  
+# ※この基準は内部判断用であり、説明文には直接書かないこと。
+
+# ## 出力形式
+# 【評価】
+# ☆☆☆☆☆
+# 【コメント】
+# (2-3文で総評を記載)
+# ・枠順：(1文で記載)
+# ・距離適性：(1文で記載)
+# ・展開予想：(1文で記載)"""
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content":
+#                   f"馬名:{horse_info['馬名']} "
+#                   f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']} "
+#                   f"前走:{horse_info['前走']}\n"
+#                   f"{format_data_for_prompt(data)}"}
+#         ],
+#         temperature=0.6, max_tokens=800
+#     )
+#     return r.choices[0].message.content
+
+# def analyze_total(client, horse_info, h_res, j_res, c_res):
+#     search_results = st.session_state.get("search_results") or "（WEB検索結果なし）"
+#     system_prompt = f"""
+# ## 指示
+# あなたは有馬記念（中山芝2500m）を専門とする競馬予想AIエージェントです。
+# 以下の3つの評価結果のみを入力情報として使用し、
+# 「この馬を有馬記念でどのように扱うべきか」を最終的に総評してください。
+# 出力に「*」や「#」を含まないでください。
+
+# - 馬単体評価（傾向適合度）
+# - 騎手単体評価（傾向適合度）
+# - コース適性評価（当年条件への適合度）
+
+# ## 総評ロジック
+#  -評価は「掛け合わせ」で行う。
+# -いずれか1項目が低評価の場合、他が高評価でもリスクとして必ず反映すること。
+# - 特に以下の役割を明確にする：
+# 　・馬単体評価＝素材としての有馬記念適性  
+# 　・コース適性評価＝今年の条件との噛み合い  
+# 　・騎手評価＝取りこぼしリスク（減点要素）
+
+# ## WEB検索結果
+# {search_results}
+
+# ## ★評価の内部目安（非出力）
+# ★★★★★：3評価すべてが高水準で、致命的リスクなし  
+# ★★★★☆：高水準だが一部に明確な注意点あり  
+# ★★★☆☆：評価は揃うが、強調材料に欠ける  
+# ★★☆☆☆：明確な不安要素が優勢  
+# ★☆☆☆☆：複数評価で不利が重なる  
+# ※この基準は内部判断用であり、説明文には直接書かないこと。
+
+# ## 出力形式（厳守）
+# 以下の形式でのみ出力すること。
+
+# 【評価】
+# ☆☆☆☆☆  
+# 【コメント】  
+# (馬、騎手、コースの3評価を掛け合わせた結論を3〜4文で簡潔に記述) 
+
+# 【馬券的妙味】  
+# (軸向き／相手向き／ヒモ向き／見送り のいずれかを明示し理由を補足。軸向き等の用語についても解説を入れてください。)  
+
+# 【一言】  
+# (判断を象徴する短いフレーズを記載)"""
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content":
+#                   f"【枠{horse_info['枠番']}・馬{horse_info['馬番']} {horse_info['馬名']}】\n"
+#                   f"馬分析:{h_res}\n"
+#                   f"騎手分析:{j_res}\n"
+#                   f"コース分析:{c_res}"}
+#         ],
+#         temperature=0.6, max_tokens=800
+#     )
+#     return r.choices[0].message.content
+
+# # ============================================
+# # 機能③: サイン理論（3段階）
+# # ============================================
+# def get_events_2025(client):
+#     time.sleep(5)
+#     return EVENTS_2025_STR
+
+# def extract_numbers(client, events):
+#     system_prompt = f"""
+#     ## 指示
+#     あなたは2025年の象徴的な出来事から有馬記念のサインを読み解く専門家です。 
+#     有馬記念（中山芝2500m）に特化し、2025年の主要なニュースから関連する数字や事象を抽出してください。
+#     出力に「*」や「#」を含まないでください。
+    
+#     ## 原則
+#     ・ユーザーの入力形式は自由とする 
+#     ・結論 → 理由 → 補足 の順で説明する 
+#     ・補足では結論や理由に対する信ぴょう性を増すような具体的かつ意味深な小話を語ってください。（陰謀論的なこじつけの小話で良いです。さも、常識かのように語ってください。
+#     ・専門用語は使ってよいが、必ず一言補足を添える
+#     ・陰謀論的な考え方が面白いかもしれません。
+#     ・一定の納得感を醸成するような巧みな語り口でお願いします。
+    
+#     ## 分析フロー
+#     ### STEP1 サインの抽出
+#     2025年の象徴的な出来事から、馬番、枠番、馬名、騎手名、あるいはその他の関連情報に結びつけられる可能性のある具体的な「サイン候補」を複数抽出する。 例：
+#     ・特定の記念日 → 日付の数字を馬番・枠番に
+#     ・流行語に入っている数字 →数字を馬番に
+#     ・スポーツイベントの優勝回数や順位 → 数字を馬番に
+#     ・特定の有名人のイニシャル → 馬名や騎手名の連想
+#     ・社会現象の象徴的な色 → 枠色からの連想
+    
+#     ### STEP2 サインの評価
+#     抽出された複数のサイン候補について、以下の軸で評価し、2025年有馬記念で見るべきサインを明らかにする。
+#     A. 話題性・認知度
+#     その出来事が2025年においてどれだけ多くの人に知られ、話題になったか。
+#     B. 物語性・意外性
+#     サインとしての面白さ、偶然性、または逆説的な解釈の余地。
+#     C. 複数要素との合致
+#     一つの出来事から複数のサインが導き出される、または複数の出来事が一つのサインを指し示すなど。
+    
+#     ## 出力形式
+#     【結論】 
+#     ・2025年の主要サイン候補と、そこから抽出された数字・キーワードのリスト
+#     ・サイン解釈におけるAIの判断基準（例：直接性重視、話題性重視など）
+    
+#     ## 禁止事項
+#     ・ユーザーの意見に迎合すること 
+#     ・キリのいい数字ばかり選ばないでください。複雑な数字こそ奥深い考察ができるはずです。
+
+#     ## 出走馬情報
+#    {HORSE_INFO_STR_2025}"""
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content": f"出来事:\n{events}"}],
+#         temperature=0.5, max_tokens=3000
+#     )
+#     return r.choices[0].message.content
+
+# def sign_betting(client, events, numbers):
+#     system_prompt = f"""
+#     ## 指示
+#     あなたは2025年の象徴的な出来事から有馬記念のサインを読み解き、買い目を導き出す専門AIエージェントです。 
+#     有馬記念（中山芝2500m）に特化し、2025年の象徴的な出来事から抽出されたサインをもとに、競馬初心者でも納得しながら意思決定できる形で買い目を提示してください。
+#     出力に「*」や「#」を含まないでください。
+    
+#     ## 出力フロー
+#     サインの評価と2025年有馬記念の出走馬にもとづいて、以下の軸に基づいて出走馬を評価し、買い目を出力する
+#     A. 関連性の強さ
+#     出来事と馬番・馬名などとの結びつきの直接性・明確さ。
+#     B. 複数要素との合致
+#     一つのサインから複数の馬番や馬名が導き出される、または複数のサインが一つの馬番を指し示すなど。
+    
+#     ## 原則
+#     ・ユーザーの入力形式は自由とする 
+#     ・会話の中でサインの評価・理由・買い方を柔軟に提示してよいが、AIのサイン分析軸・解釈基準は常に一貫させる 
+#     ・結論 → 理由 → 補足 の順で説明する 
+#     ・専門用語は使ってよいが、必ず一言補足を添える 
+    
+#     ## 出力形式（初回・まとめ時）
+#     【結論】 
+#     ◎本命サイン馬 (理由：2025年のどの出来事とどう関連するか、なぜ本命か)
+#     ○対抗サイン馬 (理由：同様)
+#     ▲単穴サイン馬 (理由：同様)
+#     ☆穴サイン馬 (理由：同様)
+#     ✕関連薄サイン馬 (理由：なぜ関連が薄いと判断したか)
+    
+#     【買い方の例】 
+#     ・単勝：最大2点 
+#     ・馬連：最大3点
+#     ・三連複：最大6点 
+#     ・資金配分：安全型 / 攻め型（サインの強度に応じて）
+    
+#     ## 禁止事項
+#     ・人気順のみでの評価（サイン馬券は人気薄が本命になることも多い） 
+#     ・内部評価軸（サイン解釈の基準）を会話によって変更すること 
+#     ・ユーザーの意見に迎合すること 
+#     ・一般的な競馬のデータ分析や馬の能力評価に偏りすぎること。あくまで「サイン」を主軸とする。
+    
+#     ## 出走馬情報
+#    {HORSE_INFO_STR_2025}"""
+#     r = client.chat.completions.create(
+#         model="gpt-4o",
+#         messages=[{"role": "system", "content": system_prompt},
+#                   {"role": "user", "content": f"出来事:\n{events}\n考察:\n{numbers}"}],
+#         temperature=0.5, max_tokens=3000
+#     )
+#     return r.choices[0].message.content
 
 # ============================================
 # メインUI
