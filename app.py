@@ -429,6 +429,30 @@ def _call_gpt5mini_text(client: OpenAI, system_prompt: str, user_prompt: str, ma
 # - gpt-5-mini で web_search を実行
 # - output_text が空でも sources を拾って最低限返す（RuntimeError対策）
 # ============================================
+from typing import List, Dict, Any, Optional
+
+def _get(obj: Any, key: str, default=None):
+    """dict/obj 両対応でプロパティ取得"""
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+def _extract_sources_from_response(r: Any) -> List[Any]:
+    """
+    Responses API の web_search_call から sources を抽出。
+    SDKの返却が dict / typed object のどちらでも動くようにする。
+    """
+    out = _get(r, "output", []) or []
+    for item in out:
+        if _get(item, "type", None) == "web_search_call":
+            action = _get(item, "action", None)
+            sources = _get(action, "sources", None)
+            if sources:
+                return list(sources)
+    return []
+
 def gpt_web_search(client: OpenAI, prompt: str) -> str:
     r = client.responses.create(
         model="gpt-5-mini",
@@ -439,33 +463,33 @@ def gpt_web_search(client: OpenAI, prompt: str) -> str:
         max_output_tokens=3000,
     )
 
-    text = (r.output_text or "").strip()
+    # まず通常の output_text を返す
+    text = (_get(r, "output_text", "") or "").strip()
     if text:
         return text
 
-    # フォールバック：モデルが message を返さず output_text が空でも、sources を拾って返す
-    sources: List[Dict[str, Any]] = []
-    try:
-        for item in getattr(r, "output", []) or []:
-            if isinstance(item, dict) and item.get("type") == "web_search_call":
-                action = item.get("action") or {}
-                sources = action.get("sources") or []
-                break
-    except Exception:
-        sources = []
+    # フォールバック：sources を拾ってURL一覧を返す（typed object対応）
+    sources = _extract_sources_from_response(r)
 
     if sources:
         lines = ["（検索テキストが空だったため、取得URL一覧を返します）"]
         for s in sources[:30]:
-            title = (s.get("title") or "").strip()
-            url = (s.get("url") or "").strip()
-            if title and url:
+            title = (_get(s, "title", "") or "").strip()
+            url = (_get(s, "url", "") or "").strip()
+            snippet = (_get(s, "snippet", "") or "").strip()
+
+            # できるだけ情報量を残す（snippet があれば付ける）
+            if title and url and snippet:
+                lines.append(f"- {title} : {url}\n  {snippet}")
+            elif title and url:
                 lines.append(f"- {title} : {url}")
             elif url:
                 lines.append(f"- {url}")
-        return "\n".join(lines)
 
-    return ""  # ensure側で空判定される
+        return "\n".join(lines).strip()
+
+    # sources も空：検索が0件/ブロック/一時障害など。ここでは空を返す（ensure側の挙動は維持）
+    return ""
 
 
 def ensure_daily_gpt_search(client: OpenAI, query: str) -> str:
