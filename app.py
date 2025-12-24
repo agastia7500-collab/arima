@@ -63,6 +63,19 @@ def render_box(title: str, body_text: str, box_class: str = "result-box") -> str
       <div class="box-body">{body}</div>
     </div>
     """
+def render_sidebar_search(sb_debug, sb_body):
+    sb_debug.caption(f"date={st.session_state.get('search_date_jst')}")
+    sb_debug.caption(f"has_results={bool(st.session_state.get('search_results'))}")
+    sb_debug.caption(f"error={st.session_state.get('search_error')}")
+
+    if st.session_state.get("search_results"):
+        sb_body.markdown(
+            render_box("Web検索結果", st.session_state["search_results"], "analysis-box"),
+            unsafe_allow_html=True
+        )
+    else:
+        sb_body.info("まだWeb検索は実行されていません")
+
 
 # ============================================
 # カスタムCSS
@@ -1022,18 +1035,13 @@ def main():
         st.markdown("---")
         st.markdown("### 🔎 Web検索結果（当日キャッシュ）")
     
-        # ★デバッグ（必ず出す）
-        st.caption(f"date={st.session_state.get('search_date_jst')}")
-        st.caption(f"has_results={bool(st.session_state.get('search_results'))}")
-        st.caption(f"error={st.session_state.get('search_error')}")
-    
-        if st.session_state.get("search_results"):
-            st.markdown(render_box("Web検索結果", st.session_state["search_results"], "analysis-box"),
-                        unsafe_allow_html=True)
-        else:
-            st.info("まだWeb検索は実行されていません")
+        sb_debug = st.empty()
+        sb_body  = st.empty()   # ← 後でここを書き換える
+
  
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
+
+    render_sidebar_search(sb_debug, sb_body)
 
     # =========================
     # タブ1: 総合予想（再実行時に前回結果を全消し）
@@ -1079,6 +1087,7 @@ def main():
 
                 ph1.info("📊 分析中...")                
                 ensure_daily_gpt_search(client, search_query)
+                render_sidebar_search(sb_debug, sb_body)
                 comp["step1"] = analyze_data_summary(client, data)
                 ph1.markdown(render_box("📊 データ傾向", comp["step1"], "result-box"), unsafe_allow_html=True)
 
@@ -1148,6 +1157,7 @@ def main():
 
                 ph_h.info("分析中...")
                 ensure_daily_gpt_search(client, search_query)
+                render_sidebar_search(sb_debug, sb_body)
                 h_res = analyze_horse(client, horse_info, data)
                 ph_h.markdown(render_box("", h_res, "analysis-box box-horse"), unsafe_allow_html=True)
 
@@ -1214,6 +1224,7 @@ def main():
 
                 ph_e.info("収集中...")
                 ensure_daily_gpt_search(client, search_query)
+                render_sidebar_search(sb_debug, sb_body)
                 e_res = get_events_2025(client)
                 sign["events"] = e_res
                 ph_e.markdown(render_box("", e_res, "analysis-box box-events"), unsafe_allow_html=True)
