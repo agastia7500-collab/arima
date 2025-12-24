@@ -601,7 +601,7 @@ def analyze_data_summary(client, data):
         client=client,
         system_prompt=system_prompt,
         user_prompt=f"データ分析:\n{format_data_for_prompt(data)}",
-        max_output_tokens=10000,
+        max_output_tokens=8000,
     )
 
 
@@ -678,7 +678,7 @@ F. 当日要素
         client=client,
         system_prompt=system_prompt,
         user_prompt=f"【分析結果】\n{analysis}",
-        max_output_tokens=10000,
+        max_output_tokens=8000,
     )
 
 
@@ -714,7 +714,7 @@ def suggest_betting(client, prediction):
         client=client,
         system_prompt=system_prompt,
         user_prompt=f"予想:\n{prediction}",
-        max_output_tokens=10000,
+        max_output_tokens=8000,
     )
 
 # ============================================
@@ -768,7 +768,7 @@ def analyze_horse(client, horse_info, data):
         f"性齢:{horse_info['性齢']} 血統:{horse_info['血統']} 前走:{horse_info['前走']}\n"
         f"{format_data_for_prompt(data)}"
     )
-    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=10000)
+    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=8000)
 
 
 def analyze_jockey(client, horse_info, data):
@@ -810,7 +810,7 @@ def analyze_jockey(client, horse_info, data):
         f"枠番:{horse_info['枠番']} 馬番:{horse_info['馬番']}\n"
         f"{format_data_for_prompt(data)}"
     )
-    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=10000)
+    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=8000)
 
 
 def analyze_course(client, horse_info, data):
@@ -872,7 +872,7 @@ def analyze_course(client, horse_info, data):
         f"前走:{horse_info['前走']}\n"
         f"{format_data_for_prompt(data)}"
     )
-    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=10000)
+    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=8000)
 
 
 def analyze_total(client, horse_info, h_res, j_res, c_res):
@@ -927,7 +927,7 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
         f"騎手分析:{j_res}\n"
         f"コース分析:{c_res}"
     )
-    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=10000)
+    return _call_gpt5mini_text(client, system_prompt, user_prompt, max_output_tokens=8000)
 
 # ============================================
 # 機能③: サイン理論（3段階）
@@ -986,7 +986,7 @@ C. 複数要素との合致
         client=client,
         system_prompt=system_prompt,
         user_prompt=f"出来事:\n{events}",
-        max_output_tokens=10000,
+        max_output_tokens=8000,
     )
 
 
@@ -1037,7 +1037,7 @@ B. 複数要素との合致
         client=client,
         system_prompt=system_prompt,
         user_prompt=f"出来事:\n{events}\n考察:\n{numbers}",
-        max_output_tokens=10000,
+        max_output_tokens=8000,
     )
 
 # ============================================
