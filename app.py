@@ -430,63 +430,72 @@ def _call_gpt5mini_text(client: OpenAI, system_prompt: str, user_prompt: str, ma
 # - gpt-5-mini で web_search を実行
 # - output_text が空でも sources を拾って最低限返す（RuntimeError対策）
 # ============================================
-from typing import List, Dict, Any, Optional
+def gpt_web_search(client, prompt: str) -> str: 
+    response = client.responses.create( 
+        model="gpt-4.1", 
+        tools=[{"type": "web_search"}], 
+        input=prompt, # ← search_query をそのまま入れる 
+        max_output_tokens=3000, # 出力量制御 
+    ) 
+    return response.output_text
 
-def _get(obj: Any, key: str, default=None):
-    """dict/obj 両対応でプロパティ取得"""
-    if obj is None:
-        return default
-    if isinstance(obj, dict):
-        return obj.get(key, default)
-    return getattr(obj, key, default)
+# from typing import List, Dict, Any, Optional
 
-def _extract_sources_from_response(r: Any) -> List[Any]:
-    """
-    Responses API の web_search_call から sources を抽出。
-    SDKの返却が dict / typed object のどちらでも動くようにする。
-    """
-    out = _get(r, "output", []) or []
-    for item in out:
-        if _get(item, "type", None) == "web_search_call":
-            action = _get(item, "action", None)
-            sources = _get(action, "sources", None)
-            if sources:
-                return list(sources)
-    return []
+# def _get(obj: Any, key: str, default=None):
+#     """dict/obj 両対応でプロパティ取得"""
+#     if obj is None:
+#         return default
+#     if isinstance(obj, dict):
+#         return obj.get(key, default)
+#     return getattr(obj, key, default)
 
-def gpt_web_search(client: OpenAI, prompt: str) -> str:
-    r = client.responses.create(
-        model="gpt-5-mini",
-        tools=[{"type": "web_search"}],
-        tool_choice="auto",
-        include=["web_search_call.action.sources"],
-        input=prompt,
-        max_output_tokens=3000,
-    )
+# def _extract_sources_from_response(r: Any) -> List[Any]:
+#     """
+#     Responses API の web_search_call から sources を抽出。
+#     SDKの返却が dict / typed object のどちらでも動くようにする。
+#     """
+#     out = _get(r, "output", []) or []
+#     for item in out:
+#         if _get(item, "type", None) == "web_search_call":
+#             action = _get(item, "action", None)
+#             sources = _get(action, "sources", None)
+#             if sources:
+#                 return list(sources)
+#     return []
 
-    text = (getattr(r, "output_text", "") or "").strip()
-    if text:
-        return text
+# def gpt_web_search(client: OpenAI, prompt: str) -> str:
+#     r = client.responses.create(
+#         model="gpt-5-mini",
+#         tools=[{"type": "web_search"}],
+#         tool_choice="auto",
+#         include=["web_search_call.action.sources"],
+#         input=prompt,
+#         max_output_tokens=3000,
+#     )
 
-    # 文章が空でも、sources/snippet を「検索結果テキスト」として返す
-    sources = []
-    for item in getattr(r, "output", []) or []:
-        if getattr(item, "type", None) == "web_search_call":
-            action = getattr(item, "action", None)
-            sources = list(getattr(action, "sources", None) or [])
-            break
+#     text = (getattr(r, "output_text", "") or "").strip()
+#     if text:
+#         return text
 
-    if sources:
-        lines = ["（検索本文が空だったため、検索結果スニペットを返します）"]
-        for s in sources[:20]:
-            title = (getattr(s, "title", "") or "").strip()
-            url = (getattr(s, "url", "") or "").strip()
-            snippet = (getattr(s, "snippet", "") or "").strip()
-            if title or snippet or url:
-                lines.append(f"- {title}\n  {url}\n  {snippet}".strip())
-        return "\n".join(lines).strip()
+#     # 文章が空でも、sources/snippet を「検索結果テキスト」として返す
+#     sources = []
+#     for item in getattr(r, "output", []) or []:
+#         if getattr(item, "type", None) == "web_search_call":
+#             action = getattr(item, "action", None)
+#             sources = list(getattr(action, "sources", None) or [])
+#             break
 
-    return "（WEB検索結果なし）"
+#     if sources:
+#         lines = ["（検索本文が空だったため、検索結果スニペットを返します）"]
+#         for s in sources[:20]:
+#             title = (getattr(s, "title", "") or "").strip()
+#             url = (getattr(s, "url", "") or "").strip()
+#             snippet = (getattr(s, "snippet", "") or "").strip()
+#             if title or snippet or url:
+#                 lines.append(f"- {title}\n  {url}\n  {snippet}".strip())
+#         return "\n".join(lines).strip()
+
+#     return "（WEB検索結果なし）"
 
 def ensure_daily_gpt_search(client: OpenAI, query: str) -> str:
     if client is None:
