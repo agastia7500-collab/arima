@@ -423,17 +423,17 @@ search_query = """
 以下について、WEB検索を行い、事実ベースで整理してください。
 
 【調査対象】
-- 2025年 有馬記念
-- 出走予定馬
-- 枠順の確定状況
-- 騎手の確定状況
-- 公式発表・一次情報
+1. 有馬記念の出走馬一覧・枠順・騎手・斤量
+2. 各馬の直近レース内容（最低1走）
+　- 距離 / 馬場 / 通過順 / 上がり / 着差
+3. 当日の馬体重増減・馬場状態・天候
+4. 逃げ・先行馬の想定（ペース判断用）
 
 【出力要件】
-- JRA・主催者・公式情報を最優先
+- JRA/主催者、公式出走表・公式結果、信頼できる出走データベース（事実情報）を最優先
 - 推測・予想・主観は含めない
-- 確定情報 / 未確定情報 を分ける
-- 箇条書きで20項目以上
+- 予想記事の印、回顧記事の主観評価、SNSの推測は使用禁止
+- 箇条書きの文章で20項目以上
 - 重要度順に整理
 """
 
@@ -643,10 +643,15 @@ def suggest_betting(client, prediction):
 - 推奨馬印
 
 ## 出力形式
-【結論】
-・馬連：最大3点
-・三連複：最大6点
-・資金配分：安全型 / 
+【馬連】
+(最大3点で馬連の買い目を記載)
+【三連複】
+(最大6点で三連複の買い目を記載)
+【資金配分】
+＜安全型＞
+(安全型の資金配分を記載)
+＜攻め型＞
+(攻め型の資金配分を記載)
 
 ## 出走馬情報
 {HORSE_INFO_STR_2025}
@@ -698,7 +703,7 @@ def analyze_horse(client, horse_info, data):
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
-【総合評価】
+【評価】
 ☆☆☆☆☆
 【コメント】
 (2-3文で記載)
@@ -745,7 +750,7 @@ def analyze_jockey(client, horse_info, data):
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
-【総合評価】
+【評価】
 ☆☆☆☆☆
 【コメント】
 (2-3文で記載)"""
@@ -806,7 +811,7 @@ def analyze_course(client, horse_info, data):
 ※この基準は内部判断用であり、説明文には直接書かないこと。
 
 ## 出力形式
-【総合評価】
+【評価】
 ☆☆☆☆☆
 【コメント】
 (2-3文で総評を記載)
@@ -860,7 +865,7 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
 ## 出力形式（厳守）
 以下の形式でのみ出力すること。
 
-【総合評価】
+【評価】
 ☆☆☆☆☆  
 【コメント】  
 (馬、騎手、コースの3評価を掛け合わせた結論を3〜4文で簡潔に記述) 
@@ -1013,7 +1018,21 @@ def main():
             st.session_state["search_date_jst"] = None
             st.session_state["search_results"] = None
             st.success("検索キャッシュをリセットしました（次回は再検索します）")
-     
+
+        st.markdown("### 🔍 Web検索結果（当日キャッシュ）")
+    
+        if st.session_state.get("search_results"):
+            st.markdown(
+                render_box(
+                    "検索結果",
+                    st.session_state["search_results"],
+                    "analysis-box"
+                ),
+                unsafe_allow_html=True
+            )
+        else:
+            st.caption("まだWeb検索は実行されていません")
+ 
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
     # =========================
@@ -1112,10 +1131,10 @@ def main():
 
         # 保存済みがあれば表示（押していない時だけ）
         if saved and not eval_btn:
-            ph_h.markdown(render_box("🐴 馬分析", saved["h"], "analysis-box box-horse"), unsafe_allow_html=True)
-            ph_j.markdown(render_box("🏇 騎手分析", saved["j"], "analysis-box box-jockey"), unsafe_allow_html=True)
-            ph_c.markdown(render_box("🏟️ コース分析", saved["c"], "analysis-box box-course"), unsafe_allow_html=True)
-            ph_t.markdown(render_box("📊 総合評価", saved["t"], "analysis-box box-total"), unsafe_allow_html=True)
+            ph_h.markdown(render_box("", saved["h"], "analysis-box box-horse"), unsafe_allow_html=True)
+            ph_j.markdown(render_box("", saved["j"], "analysis-box box-jockey"), unsafe_allow_html=True)
+            ph_c.markdown(render_box("", saved["c"], "analysis-box box-course"), unsafe_allow_html=True)
+            ph_t.markdown(render_box("", saved["t"], "analysis-box box-total"), unsafe_allow_html=True)
 
         if eval_btn:
             if client is None:
@@ -1130,19 +1149,19 @@ def main():
                 ph_h.info("分析中...")
                 ensure_daily_gpt_search(client, search_query)
                 h_res = analyze_horse(client, horse_info, data)
-                ph_h.markdown(render_box("🐴 馬分析", h_res, "analysis-box box-horse"), unsafe_allow_html=True)
+                ph_h.markdown(render_box("", h_res, "analysis-box box-horse"), unsafe_allow_html=True)
 
                 ph_j.info("分析中...")
                 j_res = analyze_jockey(client, horse_info, data)
-                ph_j.markdown(render_box("🏇 騎手分析", j_res, "analysis-box box-jockey"), unsafe_allow_html=True)
+                ph_j.markdown(render_box("", j_res, "analysis-box box-jockey"), unsafe_allow_html=True)
 
                 ph_c.info("分析中...")
                 c_res = analyze_course(client, horse_info, data)
-                ph_c.markdown(render_box("🏟️ コース分析", c_res, "analysis-box box-course"), unsafe_allow_html=True)
+                ph_c.markdown(render_box("", c_res, "analysis-box box-course"), unsafe_allow_html=True)
 
                 ph_t.info("統合中...")
                 t_res = analyze_total(client, horse_info, h_res, j_res, c_res)
-                ph_t.markdown(render_box("📊 総合評価", t_res, "analysis-box box-total"), unsafe_allow_html=True)
+                ph_t.markdown(render_box("", t_res, "analysis-box box-total"), unsafe_allow_html=True)
 
                 st.session_state["eval_results"][horse_num] = {"h": h_res, "j": j_res, "c": c_res, "t": t_res}
 
@@ -1175,11 +1194,11 @@ def main():
 
         # 既存結果（再実行していないときは保持表示）
         if sign["events"]:
-            ph_e.markdown(render_box("📅 2025年の出来事", sign["events"], "analysis-box box-events"), unsafe_allow_html=True)
+            ph_e.markdown(render_box("", sign["events"], "analysis-box box-events"), unsafe_allow_html=True)
         if sign["numbers"]:
-            ph_n.markdown(render_box("🔢 サイン抽出", sign["numbers"], "analysis-box box-numbers"), unsafe_allow_html=True)
+            ph_n.markdown(render_box("", sign["numbers"], "analysis-box box-numbers"), unsafe_allow_html=True)
         if sign["bet"]:
-            ph_b.markdown(render_box("💰 サイン理論買い目", sign["bet"], "analysis-box box-buy"), unsafe_allow_html=True)
+            ph_b.markdown(render_box("", sign["bet"], "analysis-box box-buy"), unsafe_allow_html=True)
 
         if sign_btn:
             if client is None:
@@ -1197,23 +1216,22 @@ def main():
                 ensure_daily_gpt_search(client, search_query)
                 e_res = get_events_2025(client)
                 sign["events"] = e_res
-                ph_e.markdown(render_box("📅 2025年の出来事", e_res, "analysis-box box-events"), unsafe_allow_html=True)
+                ph_e.markdown(render_box("", e_res, "analysis-box box-events"), unsafe_allow_html=True)
 
                 ph_n.info("抽出中...")
                 n_res = extract_numbers(client, e_res)
                 sign["numbers"] = n_res
-                ph_n.markdown(render_box("🔢 サイン抽出", n_res, "analysis-box box-numbers"), unsafe_allow_html=True)
+                ph_n.markdown(render_box("", n_res, "analysis-box box-numbers"), unsafe_allow_html=True)
 
                 ph_b.info("導出中...")
                 b_res = sign_betting(client, e_res, n_res)
                 sign["bet"] = b_res
-                ph_b.markdown(render_box("💰 サイン理論買い目", b_res, "analysis-box box-buy"), unsafe_allow_html=True)
+                ph_b.markdown(render_box("", b_res, "analysis-box box-buy"), unsafe_allow_html=True)
 
     # フッター
     st.markdown("---")
     st.markdown("""<div style="text-align:center;color:#999;padding:1rem;">
-        ⚠️ 予想は参考情報です。馬券購入は自己責任で。<br>
-        🏇 第70回 有馬記念 PREDICTOR 2025 | Powered by GPT-4o
+        🏇 第70回 有馬記念 PREDICTOR 2025
     </div>""", unsafe_allow_html=True)
 
 if __name__ == "__main__":
