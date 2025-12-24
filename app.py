@@ -390,6 +390,7 @@ EVENTS_2025_STR = """【2025年の主な出来事】
 search_query = """
 あなたは第70回有馬記念2025の予想に資する情報を調査する専門家です。
 以下の調査対象について、WEB検索を行い、事実ベースで整理してください。
+必ず整理した内容を出力してください。
 
 【調査対象】
 1. 有馬記念の出走馬一覧・枠順・騎手・斤量
@@ -460,7 +461,7 @@ def gpt_web_search(client: OpenAI, prompt: str) -> str:
         tool_choice="auto",
         include=["web_search_call.action.sources"],
         input=prompt,
-        max_output_tokens=3000,
+        max_output_tokens=5000,
     )
 
     # まず通常の output_text を返す
@@ -490,7 +491,6 @@ def gpt_web_search(client: OpenAI, prompt: str) -> str:
 
     # sources も空：検索が0件/ブロック/一時障害など。ここでは空を返す（ensure側の挙動は維持）
     return ""
-
 
 def ensure_daily_gpt_search(client: OpenAI, query: str) -> str:
     if client is None:
