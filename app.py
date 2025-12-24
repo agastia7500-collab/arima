@@ -436,7 +436,7 @@ def gpt_web_search(client: OpenAI, prompt: str) -> str:
         tool_choice="auto",
         include=["web_search_call.action.sources"],
         input=prompt,
-        max_output_tokens=5000,
+        max_output_tokens=3000,
     )
 
     text = (r.output_text or "").strip()
