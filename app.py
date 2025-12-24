@@ -449,30 +449,23 @@ def gpt_web_search(client, prompt: str) -> str:
     )
     return response.output_text
 
-
 def ensure_daily_gpt_search(client, query: str) -> str:
-    """
-    tab1/2/3のどこから呼ばれても、
-    JSTで「その日1回」だけ GPT検索を実行し、結果を session_state に保存して返す。
-    """
     if client is None:
         return None
 
     today = datetime.now(JST).date().isoformat()
 
-    # すでに今日の分があれば再利用
+    # 今日の分があれば再利用
     if st.session_state.get("search_date_jst") == today and st.session_state.get("search_results"):
         return st.session_state["search_results"]
 
-    # 今日の分がなければ実行
-    resp = gpt_web_search(client, query)
-    text = getattr(resp, "output_text", None)
-    if not text:
-        text = str(resp)
+    # 今日の分がなければ実行（gpt_web_searchは str を返す前提）
+    text = gpt_web_search(client, query)  # ← textは str
 
     st.session_state["search_results"] = text
     st.session_state["search_date_jst"] = today
     return text
+
 
 # ============================================
 # 機能①: 総合予想（3段階）
