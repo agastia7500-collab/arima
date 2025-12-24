@@ -375,6 +375,23 @@ def google_search(query: str, num: int = 5) -> List[Dict[str, str]]:
         })
     return results
 
+def summarize_search_with_llm(client, search_text: str) -> str:
+    system_prompt = """
+あなたは競馬情報整理アシスタントです。
+以下のWeb検索結果を読み、重要な事実情報だけを簡潔に整理してください。
+推測や断定はしないでください。
+"""
+
+    r = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": search_text}
+        ],
+        temperature=0.2,
+        max_tokens=800,
+    )
+    return r.choices[0].message.content
 
 # ============================================
 # 機能①: 総合予想（3段階）
@@ -895,10 +912,30 @@ def main():
         if do_search:
             try:
                 st.session_state["search_results"] = google_search(q, num=5)
+                raw_results = google_search(q, num=5)
+                search_text = format_search_results(raw_results)
+
+                llm_result = summarize_search_with_llm(client, search_text)
+
+                st.session_state["search_results"] = llm_result
+
                 st.success("✅ 検索結果を search_results に格納しました")
             except Exception as e:
                 st.error(f"検索に失敗: {e}")
-                
+
+        # 検索結果（LLM後）を表示
+　　　　if st.session_state.get("search_results"):
+ 　　　　   st.markdown("---")
+　　　　    st.markdown("### 🔎 Web検索結果（LLM処理後）")
+   　　　　 st.markdown(
+     　　　　   render_box(
+        　　　　    "検索結果",
+        　　　　    st.session_state["search_results"],
+       　　　　     "analysis-box"
+    　　　　    ),
+      　　　　  unsafe_allow_html=True
+ 　　　　   )
+     
     tab1, tab2, tab3 = st.tabs(["🎯 総合予想", "🔍 単体評価", "🔮 サイン理論"])
 
     # =========================
