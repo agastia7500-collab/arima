@@ -457,7 +457,7 @@ search_query = """
 # ============================================
 def gpt_web_search(client, prompt: str) -> str:
     response = client.responses.create(
-        model="gpt-4.1",
+        model="gpt-5-mini",
         tools=[{"type": "web_search"}],
         input=prompt,              # ← search_query をそのまま入れる
         max_output_tokens=3000,     # 出力量制御
@@ -565,7 +565,7 @@ def analyze_data_summary(client, data):
 {search_results}
  """
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content": f"データ分析:\n{format_data_for_prompt(data)}"}],
         temperature=0.5, max_tokens=1000
@@ -642,7 +642,7 @@ F. 当日要素
 {search_results}
 """
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content": f"【分析結果】\n{analysis}"}],
         temperature=0.7, max_tokens=1500
@@ -678,7 +678,7 @@ def suggest_betting(client, prediction):
 {search_results}
 """
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content": f"予想:\n{prediction}"}],
         temperature=0.6, max_tokens=1000
@@ -730,7 +730,7 @@ def analyze_horse(client, horse_info, data):
 ・年齢評価：(1文で記載)
 ・前走結果評価：(1文で記載)"""
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content":
                   f"馬名:{horse_info['馬名']} "
@@ -775,7 +775,7 @@ def analyze_jockey(client, horse_info, data):
 【コメント】
 (2-3文で記載)"""
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content":
                   f"騎手:{horse_info['騎手']} "
@@ -840,7 +840,7 @@ def analyze_course(client, horse_info, data):
 ・距離適性：(1文で記載)
 ・展開予想：(1文で記載)"""
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content":
                   f"馬名:{horse_info['馬名']} "
@@ -898,7 +898,7 @@ def analyze_total(client, horse_info, h_res, j_res, c_res):
 【一言】  
 (判断を象徴する短いフレーズを記載)"""
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content":
                   f"【枠{horse_info['枠番']}・馬{horse_info['馬番']} {horse_info['馬名']}】\n"
@@ -962,7 +962,7 @@ def extract_numbers(client, events):
     ## 出走馬情報
    {HORSE_INFO_STR_2025}"""
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content": f"出来事:\n{events}"}],
         temperature=0.5, max_tokens=3000
@@ -1012,7 +1012,7 @@ def sign_betting(client, events, numbers):
     ## 出走馬情報
    {HORSE_INFO_STR_2025}"""
     r = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[{"role": "system", "content": system_prompt},
                   {"role": "user", "content": f"出来事:\n{events}\n考察:\n{numbers}"}],
         temperature=0.5, max_tokens=3000
