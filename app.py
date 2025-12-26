@@ -1206,32 +1206,8 @@ def main():
             
             eval_btn = st.button("🔍 評価スタート", key="eval_btn", use_container_width=True)
 
-    
-    # with tab2:
-    #     st.markdown(
-    #         """<div class="feature-card">
-    #         <h3>🔍 単体評価機能</h3>
-    #         <p>馬・騎手・コースの3軸で分析 → 統合評価</p>
-    #     </div>""",
-    #         unsafe_allow_html=True,
-    #     )
-
-    #     col1, col2, col3 = st.columns([1, 2, 1])
-    #     with col2:
-    #         horse_num = st.selectbox(
-    #             "🎰 馬を選択",
-    #             list(HORSE_LIST_2025.keys()),
-    #             format_func=lambda x: (
-    #                 f"[{HORSE_LIST_2025[x]['枠番']}]"
-    #                 f" {HORSE_LIST_2025[x]['馬番']}｜"
-    #                 f"{HORSE_LIST_2025[x]['馬名']}（{HORSE_LIST_2025[x]['騎手']}）"
-    #             ),
-    #             key="horse_select",
-    #         )
-    #         eval_btn = st.button("🔍 評価スタート", key="eval_btn", use_container_width=True)
-
         horse_info = HORSE_LIST_2025[horse_num]
-        st.markdown(f"## [{horse_info['枠番']}] {horse_info['馬番']} {horse_info['馬名']}（{horse_info['騎手']}）")
+        st.markdown(f"## [{horse_info['枠番']}枠] {horse_info['馬番']}番 {horse_info['馬名']}（{horse_info['騎手']}）")
 
         col_h, col_j, col_c = st.columns(3)
         with col_h:
