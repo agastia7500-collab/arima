@@ -1167,7 +1167,7 @@ def main():
                 ph3.markdown(render_box("💰 買い目", comp["step3"], "result-box"), unsafe_allow_html=True)
 
     # =========================
-    # タブ2: 単体評価（馬ごとに結果を保持）
+    # タブ2: 単体評価
     # =========================
     with tab2:
         st.markdown(
@@ -1178,19 +1178,57 @@ def main():
             unsafe_allow_html=True,
         )
 
+        # 表示用フォーマット関数を定義（エラー回避・デバッグ用）
+        def get_horse_label(horse_id):
+            info = HORSE_LIST_2025.get(horse_id)
+            if not info:
+                return f"データ不明（ID: {horse_id}）"
+            
+            # 枠番、馬番を明示的に取得
+            waku = info.get("枠番", "?")
+            umaban = info.get("馬番", "?")
+            name = info.get("馬名", "名称不明")
+            jockey = info.get("騎手", "騎手不明")
+            
+            return f"[{waku}枠] {umaban}番｜{name}（{jockey}）"
+
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
+            # 辞書のキーを明示的にソートしてリスト化（順番崩れ防止）
+            horse_options = sorted(list(HORSE_LIST_2025.keys()))
+            
             horse_num = st.selectbox(
                 "🎰 馬を選択",
-                list(HORSE_LIST_2025.keys()),
-                format_func=lambda x: (
-                    f"[{HORSE_LIST_2025[x]['枠番']}]"
-                    f" {HORSE_LIST_2025[x]['馬番']}｜"
-                    f"{HORSE_LIST_2025[x]['馬名']}（{HORSE_LIST_2025[x]['騎手']}）"
-                ),
-                key="horse_select",
+                options=horse_options,
+                format_func=get_horse_label,
+                key="horse_select_v2",  # keyを変更してキャッシュを強制リフレッシュ
             )
+            
             eval_btn = st.button("🔍 評価スタート", key="eval_btn", use_container_width=True)
+
+    
+    # with tab2:
+    #     st.markdown(
+    #         """<div class="feature-card">
+    #         <h3>🔍 単体評価機能</h3>
+    #         <p>馬・騎手・コースの3軸で分析 → 統合評価</p>
+    #     </div>""",
+    #         unsafe_allow_html=True,
+    #     )
+
+    #     col1, col2, col3 = st.columns([1, 2, 1])
+    #     with col2:
+    #         horse_num = st.selectbox(
+    #             "🎰 馬を選択",
+    #             list(HORSE_LIST_2025.keys()),
+    #             format_func=lambda x: (
+    #                 f"[{HORSE_LIST_2025[x]['枠番']}]"
+    #                 f" {HORSE_LIST_2025[x]['馬番']}｜"
+    #                 f"{HORSE_LIST_2025[x]['馬名']}（{HORSE_LIST_2025[x]['騎手']}）"
+    #             ),
+    #             key="horse_select",
+    #         )
+    #         eval_btn = st.button("🔍 評価スタート", key="eval_btn", use_container_width=True)
 
         horse_info = HORSE_LIST_2025[horse_num]
         st.markdown(f"## [{horse_info['枠番']}] {horse_info['馬番']} {horse_info['馬名']}（{horse_info['騎手']}）")
