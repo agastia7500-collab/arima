@@ -1207,8 +1207,9 @@ def main():
             eval_btn = st.button("🔍 評価スタート", key="eval_btn", use_container_width=True)
 
         horse_info = HORSE_LIST_2025[horse_num]
-        st.markdown(f"## [{horse_info['枠番']}枠] {horse_info['馬番']}番 {horse_info['馬名']}（{horse_info['騎手']}）")
-
+        # セレクトボックスの表記「[1枠] 1番｜馬名（騎手）」に合わせる
+        st.markdown(f"## [{horse_info['枠番']}枠] {horse_info['馬番']}番｜{horse_info['馬名']}（{horse_info['騎手']}）")
+        
         col_h, col_j, col_c = st.columns(3)
         with col_h:
             st.markdown('<div class="label label-horse">🐴 馬分析</div>', unsafe_allow_html=True)
